@@ -167,14 +167,15 @@ async function renderStats() {
   fm.fit(state.matrix);
   state.freqModel = fm;
 
-  const topN  = fm.topNumbers(10);
-  const maxC  = Math.max(...topN.map(x => x.count), 1);
+  // Hot = top by BLENDED weight (60% recent + 40% all-time)
+  const topN = fm.topNumbers(10);
   $("hot-balls").innerHTML = topN.map(({ ball, count }) =>
-    `<span class="ball hot" title="${count} appearances">${ball}</span>`
+    `<span class="ball hot" title="${count} all-time appearances">${ball}</span>`
   ).join("");
 
+  // Cold = bottom of blended ranking
   const allBalls = Array.from({ length: cfg.max }, (_, i) => i + 1);
-  const cold = [...allBalls].sort((a, b) => fm.counts[a] - fm.counts[b]).slice(0, 10);
+  const cold = [...allBalls].sort((a, b) => fm.blendedP(a) - fm.blendedP(b)).slice(0, 10);
   $("cold-balls").innerHTML = cold.map(b =>
     `<span class="ball cold" title="${fm.counts[b]} appearances">${b}</span>`
   ).join("");
@@ -186,9 +187,35 @@ async function renderStats() {
   ).join("");
 
   $("stats-panel").style.display = "block";
+  renderTrending(fm, cfg.max);
 }
 
-// ── Last 10 Draws ─────────────────────────────────────────────────────────────
+
+// ── Trending Numbers Panel ─────────────────────────────────────────────────────
+function renderTrending(fm, maxVal) {
+  const allBalls = Array.from({ length: maxVal }, (_, i) => i + 1);
+
+  // Sort by trend score (recent_rate - historical_rate)
+  const sorted   = [...allBalls].sort((a, b) => fm.trend(b) - fm.trend(a));
+  const rising   = sorted.slice(0, 12);                          // top 12 rising
+  const fading   = sorted.slice(sorted.length - 12).reverse();  // bottom 12
+
+  $("trending-up-balls").innerHTML = rising.map(b => {
+    const t    = fm.trend(b);
+    const pct  = (t * 100).toFixed(1);
+    return `<span class="ball trending-up" title="+${pct}% above avg in last 50 draws">${b}</span>`;
+  }).join("");
+
+  $("trending-down-balls").innerHTML = fading.map(b => {
+    const t    = fm.trend(b);
+    const pct  = (Math.abs(t) * 100).toFixed(1);
+    return `<span class="ball trending-down" title="${pct}% below avg in last 50 draws">${b}</span>`;
+  }).join("");
+
+  $("trending-section").style.display = "block";
+}
+
+
 function renderLast10() {
   if (!state.records.length) return;
   const last10 = state.records.slice(-10).reverse();

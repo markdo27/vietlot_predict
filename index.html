@@ -164,14 +164,14 @@
 
       <!-- Ball Stats -->
       <div class="card" id="stats-panel" style="display:none">
-        <p class="card-title">📊 Ball Statistics</p>
+        <p class="card-title">📊 Ball Statistics <span style="font-size:0.65rem;color:var(--cyan-l);text-transform:none;font-weight:400">(ranked by 60% recent + 40% all-time)</span></p>
         <div class="stats-grid">
           <div class="stat-section">
-            <p class="stat-label hot">🔥 Hottest</p>
+            <p class="stat-label hot">🔥 Hottest (Blended)</p>
             <div class="balls-row" id="hot-balls"></div>
           </div>
           <div class="stat-section">
-            <p class="stat-label cold">🧊 Coldest</p>
+            <p class="stat-label cold">🧊 Coldest (Blended)</p>
             <div class="balls-row" id="cold-balls"></div>
           </div>
           <div class="stat-section">
@@ -180,6 +180,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Trending Numbers -->
+      <div class="card" id="trending-section" style="display:none">
+        <p class="card-title">📈 Trending — Last 50 Draws vs All-Time</p>
+        <div class="trending-grid">
+          <div>
+            <p class="stat-label" style="color:#22d3ee;margin-bottom:8px">⬆ Rising (appearing more recently)</p>
+            <div class="balls-row" id="trending-up-balls"></div>
+          </div>
+          <div>
+            <p class="stat-label" style="color:#f87171;margin-bottom:8px">⬇ Fading (appearing less recently)</p>
+            <div class="balls-row" id="trending-down-balls"></div>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Gap Tracker -->
       <div class="card" id="gap-section" style="display:none">
