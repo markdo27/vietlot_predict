@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vietlott ML — Power 6/55 & Mega 6/45 Prediction Tool</title>
+  <meta name="description" content="Smart statistical analysis for Vietlott Power 6/55 and Mega 6/45 — hot/cold numbers, gap tracker, scored ticket picks." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="logo">🎱</div>
+    <div>
+      <h1>Vietlott <span>ML Predictor</span></h1>
+      <p class="header-sub">Power 6/55 · Mega 6/45 · Statistical Intelligence</p>
+    </div>
+    <div class="header-actions">
+      <button class="saved-toggle-btn" id="saved-toggle-btn">
+        💾 Saved Picks <span class="saved-count" id="saved-count">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Disclaimer -->
+  <div id="disclaimer" role="alert">
+    <span class="disc-icon">⚠️</span>
+    <div><strong>Educational &amp; Experimental Use Only.</strong> Lottery draws are certified random events. Scores reflect historical statistical patterns only — not future outcomes. Play responsibly.</div>
+    <button id="dismiss-disclaimer" aria-label="Dismiss">✕</button>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ══ SIDEBAR ══ -->
+    <aside>
+
+      <!-- Step 1: Game Selection -->
+      <div class="card">
+        <p class="card-title">Step 1 — Choose Your Game</p>
+        <div class="game-cards">
+          <button class="game-card" id="btn-power655" data-game="power655">
+            <span class="game-icon">⚡</span>
+            <span class="game-name">Power 6/55</span>
+            <span class="game-meta">Pick 6 from 1–55</span>
+            <span class="game-draws" id="draws-power655">1,337 draws</span>
+          </button>
+          <button class="game-card" id="btn-mega645" data-game="mega645">
+            <span class="game-icon">🌀</span>
+            <span class="game-name">Mega 6/45</span>
+            <span class="game-meta">Pick 6 from 1–45</span>
+            <span class="game-draws" id="draws-mega645">1,304 draws</span>
+          </button>
+        </div>
+        <div id="status-msg" class="status-msg" role="status"></div>
+      </div>
+
+      <!-- Step 2: Ticket Count -->
+      <div class="card" id="step2-card" style="opacity:0.4;pointer-events:none">
+        <p class="card-title">Step 2 — How Many Tickets?</p>
+        <div class="stepper-row">
+          <button class="stepper-btn" id="step-down">−</button>
+          <span class="stepper-val" id="stepper-val">5</span>
+          <button class="stepper-btn" id="step-up">+</button>
+        </div>
+        <input type="hidden" id="ticket-count" value="5" />
+      </div>
+
+      <!-- Expert Settings (collapsed) -->
+      <div class="card" id="expert-card" style="opacity:0.4;pointer-events:none">
+        <button class="accordion-toggle" id="expert-toggle" aria-expanded="false">
+          <span>⚙️ Expert Settings</span>
+          <span class="accordion-arrow" id="expert-arrow">▼</span>
+        </button>
+        <div class="accordion-body" id="expert-body" style="display:none">
+          <div class="form-group">
+            <label for="mode-select">Prediction Mode</label>
+            <select id="mode-select">
+              <option value="frequency">📊 Frequency Analysis (Fast)</option>
+              <option value="lstm">🧠 LSTM Neural Network (~60s)</option>
+              <option value="ensemble">✨ Ensemble (LSTM + Frequency)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="strategy-select">Sampling Strategy</label>
+            <select id="strategy-select">
+              <option value="all">All (cycle through strategies)</option>
+              <option value="hot">🔥 Hot Numbers</option>
+              <option value="cold">🧊 Cold / Overdue</option>
+              <option value="mixed">⚖️ Mixed</option>
+              <option value="pair">🔗 Best Pairs</option>
+            </select>
+          </div>
+          <div id="lstm-options" style="display:none">
+            <p class="card-title" style="margin-top:4px;color:#f59e0b">🧪 Experimental — Neural Network</p>
+            <div class="two-col">
+              <div class="form-group">
+                <label for="seq-len">Seq Length</label>
+                <input type="number" id="seq-len" value="10" min="3" max="50" />
+              </div>
+              <div class="form-group">
+                <label for="epochs">Max Epochs</label>
+                <input type="number" id="epochs" value="60" min="10" max="300" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate -->
+      <button id="generate-btn" class="generate-btn" disabled>✨ Generate My Picks</button>
+
+      <!-- Upload fallback -->
+      <div class="card upload-card">
+        <p class="card-title">📂 Or Upload Your Own Data</p>
+        <div id="drop-zone" role="button" tabindex="0">
+          <div class="drop-icon">⬆️</div>
+          <p class="drop-label">Drop .jsonl or .csv here</p>
+        </div>
+        <input type="file" id="file-input" accept=".jsonl,.json,.csv" />
+      </div>
+
+    </aside>
+
+    <!-- ══ MAIN PANEL ══ -->
+    <main id="main-panel">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🎱</div>
+        <h2>Select a game to get started</h2>
+        <p>Click ⚡ Power 6/55 or 🌀 Mega 6/45 to instantly load 1,300+ real historical draws and start analysing.</p>
+      </div>
+
+      <!-- Last 10 Draws -->
+      <div class="card" id="last10-section" style="display:none">
+        <p class="card-title">🕐 Last 10 Draws</p>
+        <div class="table-wrap">
+          <table class="draws-table" id="last10-table">
+            <thead><tr><th>#</th><th>Date</th><th colspan="6">Numbers</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ball Stats -->
+      <div class="card" id="stats-panel" style="display:none">
+        <p class="card-title">📊 Ball Statistics</p>
+        <div class="stats-grid">
+          <div class="stat-section">
+            <p class="stat-label hot">🔥 Hottest</p>
+            <div class="balls-row" id="hot-balls"></div>
+          </div>
+          <div class="stat-section">
+            <p class="stat-label cold">🧊 Coldest</p>
+            <div class="balls-row" id="cold-balls"></div>
+          </div>
+          <div class="stat-section">
+            <p class="stat-label overdue">⏳ Most Overdue</p>
+            <div class="balls-row" id="overdue-balls"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gap Tracker -->
+      <div class="card" id="gap-section" style="display:none">
+        <p class="card-title">📅 Gap Tracker — Draws Since Last Appearance</p>
+        <div class="gap-grid" id="gap-grid"></div>
+      </div>
+
+      <!-- Frequency Chart -->
+      <div class="card" id="chart-section" style="display:none">
+        <p class="card-title">📈 Ball Frequency Distribution
+          <span style="float:right;font-size:0.7rem"><span style="color:#a855f7">■</span> Hot &nbsp;<span style="color:#06b6d4">■</span> Others</span>
+        </p>
+        <div class="chart-wrap"><canvas id="freq-chart"></canvas></div>
+      </div>
+
+      <!-- LSTM Training -->
+      <div class="card" id="training-section" style="display:none">
+        <p class="card-title">🧠 LSTM Training Progress</p>
+        <div class="chart-wrap"><canvas id="loss-chart"></canvas></div>
+        <p id="epoch-progress"></p>
+      </div>
+
+      <!-- Results -->
+      <div id="results-section" style="display:none">
+        <p class="section-title">🎰 Your Picks</p>
+        <div class="tickets-grid" id="tickets-container"></div>
+      </div>
+
+      <!-- Saved Picks -->
+      <div id="saved-section" style="display:none">
+        <div class="section-title-row">
+          <p class="section-title" style="margin-bottom:0">💾 Saved Picks</p>
+          <button class="clear-btn" id="clear-saved-btn">Clear All</button>
+        </div>
+        <div class="tickets-grid" id="saved-container"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script type="module" src="./js/app.js"></script>
+<script>
+  // Stepper controls
+  const val = document.getElementById("stepper-val");
+  const inp = document.getElementById("ticket-count");
+  document.getElementById("step-down").addEventListener("click", () => {
+    const n = Math.max(1, parseInt(inp.value) - 1);
+    inp.value = n; val.textContent = n;
+  });
+  document.getElementById("step-up").addEventListener("click", () => {
+    const n = Math.min(20, parseInt(inp.value) + 1);
+    inp.value = n; val.textContent = n;
+  });
+</script>
+</body>
+</html>
