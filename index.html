@@ -116,6 +116,19 @@
       <!-- Generate -->
       <button id="generate-btn" class="generate-btn" disabled>✨ Generate My Picks</button>
 
+      <!-- Bao Systems -->
+      <div class="card" id="bao-card" style="opacity:0.4;pointer-events:none">
+        <p class="card-title">🎡 Bao Wheeling System</p>
+        <div class="bao-type-grid">
+          <button class="bao-type-btn" id="bao-btn-bao5" data-bao="bao5">Bao 5<span>5-Guarantee</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao7" data-bao="bao7">Bao 7<span>7 tickets</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao8" data-bao="bao8">Bao 8<span>28 tickets</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao9" data-bao="bao9">Bao 9<span>84 tickets</span></button>
+        </div>
+        <p class="bao-hint">Pool is auto-selected from top Bayesian-ranked numbers</p>
+        <button id="bao-generate-btn" class="generate-btn" style="margin-top:10px;background:linear-gradient(135deg,#0e7490,#06b6d4)" disabled>🎡 Generate Bao Tickets</button>
+      </div>
+
       <!-- Upload fallback -->
       <div class="card upload-card">
         <p class="card-title">📂 Or Upload Your Own Data</p>
@@ -193,6 +206,25 @@
       <div id="results-section" style="display:none">
         <p class="section-title">🎰 Your Picks</p>
         <div class="tickets-grid" id="tickets-container"></div>
+      </div>
+
+      <!-- Bao Results -->
+      <div id="bao-section" style="display:none">
+        <div class="section-title-row">
+          <p class="section-title" style="margin-bottom:0">🎡 Bao Tickets</p>
+          <span class="bao-meta-badge" id="bao-meta-badge"></span>
+        </div>
+        <!-- Win Rate Table -->
+        <div class="card bao-winrate-card">
+          <p class="card-title">📊 Win Rate Analysis</p>
+          <div class="bao-info-row" id="bao-info-row"></div>
+          <table class="bao-table" id="bao-table">
+            <thead><tr><th>Match</th><th>Prize</th><th>Probability</th><th>1 in N</th><th>Guaranteed if…</th></tr></thead>
+            <tbody id="bao-table-body"></tbody>
+          </table>
+        </div>
+        <!-- Bao Tickets Grid -->
+        <div class="tickets-grid" id="bao-tickets-container"></div>
       </div>
 
       <!-- Saved Picks -->

@@ -5,12 +5,14 @@ import { parseFile, detectGame, getMatrix, GAME_CONFIG } from "./data-ingestion.
 import { buildLSTMModel, buildSequences, trainLSTM } from "./lstm-model.js";
 import { generatePredictions } from "./predictor.js";
 import { scoreAndRank, savePick, loadSavedPicks, deletePick, clearAllPicks } from "./scorer.js";
+import { generateBao, BAO_TYPES, C } from "./bao.js";
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   records: [], matrix: [], game: "power655",
   freqModel: null, lstmModel: null, trainedMode: null,
   chart: null, lossChart: null,
+  baoType: "bao7",
 };
 
 const $ = id => document.getElementById(id);
@@ -20,6 +22,7 @@ setupGameCards();
 setupDropZone();
 setupExpertAccordion();
 setupModeSelect();
+setupBao();
 $("generate-btn").addEventListener("click", onGenerate);
 $("dismiss-disclaimer").addEventListener("click", () => $("disclaimer").style.display = "none");
 $("saved-toggle-btn").addEventListener("click", toggleSavedPanel);
@@ -68,6 +71,7 @@ async function loadFromUrl(url, filename, game, card) {
     $("expert-card").style.opacity = "1";
     $("expert-card").style.pointerEvents = "auto";
     $("generate-btn").disabled = false;
+    unlockBaoCard();
 
     $("empty-state").style.display = "none";
 
@@ -457,3 +461,115 @@ window.doDeletePick = id => {
   deletePick(id);
   renderSavedPanel();
 };
+
+// ── Bao System ────────────────────────────────────────────────────────────────
+function setupBao() {
+  document.querySelectorAll(".bao-type-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".bao-type-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.baoType = btn.dataset.bao;
+      $("bao-generate-btn").disabled = !state.freqModel;
+    });
+  });
+  // default selection
+  $("bao-btn-bao7")?.classList.add("active");
+  $("bao-generate-btn").addEventListener("click", onGenerateBao);
+}
+
+function unlockBaoCard() {
+  const card = $("bao-card");
+  if (card) { card.style.opacity = "1"; card.style.pointerEvents = "auto"; }
+  $("bao-generate-btn").disabled = false;
+}
+
+async function onGenerateBao() {
+  if (!state.freqModel || !state.matrix.length) return;
+  const type   = state.baoType;
+  const cfg    = BAO_TYPES[type];
+  const maxVal = GAME_CONFIG[state.game].max;
+
+  $("bao-generate-btn").disabled = true;
+  $("bao-generate-btn").textContent = "Generating…";
+
+  try {
+    // Auto-select top-N Bayesian-ranked numbers as pool
+    const n    = cfg.poolSize || 9;
+    const pool = Array.from({ length: maxVal }, (_, i) => i + 1)
+      .sort((a, b) => state.freqModel.bayesianP(b) - state.freqModel.bayesianP(a))
+      .slice(0, n);
+
+    const result = generateBao(pool, type, maxVal);
+    renderBaoResults(result);
+  } catch (err) {
+    showStatus("error", `✗ Bao error: ${err.message}`);
+    console.error(err);
+  } finally {
+    $("bao-generate-btn").disabled = false;
+    $("bao-generate-btn").textContent = "🎡 Generate Bao Tickets";
+  }
+}
+
+function renderBaoResults(result) {
+  const { type, cfg, pool, tickets, winRates, costFormatted, ticketCount } = result;
+
+  // Meta badge
+  $("bao-meta-badge").textContent =
+    `${cfg.label} · ${ticketCount} tickets · ${costFormatted}`;
+
+  // Info chips
+  $("bao-info-row").innerHTML = [
+    { label: "Pool", val: pool.join(", ") },
+    { label: "Tickets", val: ticketCount.toLocaleString() },
+    { label: "Total Cost", val: costFormatted },
+    { label: "Guarantee", val: cfg.guarantee },
+  ].map(({ label, val }) =>
+    `<div class="bao-info-chip"><span class="chip-label">${label}</span> ${val}</div>`
+  ).join("");
+
+  // Win rate table
+  const n = pool.length;
+  $("bao-table-body").innerHTML = winRates.map(row => {
+    const gtCount = row.guaranteedTickets;
+    const gtText  = gtCount > 0
+      ? `<strong>${gtCount} ticket${gtCount > 1 ? "s" : ""} win</strong> if ${row.match} winning numbers in pool`
+      : "—";
+    return `<tr>
+      <td><span class="bao-match-badge bao-match-${row.match}">${row.match}/6</span></td>
+      <td>${row.prize}</td>
+      <td class="bao-prob">${row.pct}%</td>
+      <td class="bao-onein">1 in ${row.oneIn}</td>
+      <td class="bao-guarantee">${gtText}</td>
+    </tr>`;
+  }).join("");
+
+  // Pool ball display (once at top of ticket area)
+  const poolBalls = pool.map(b => `<span class="pool-ball">${b}</span>`).join("");
+
+  // Ticket grid
+  $("bao-tickets-container").innerHTML =
+    `<div class="ticket-card" style="grid-column:1/-1;background:rgba(6,182,212,0.06);border-color:rgba(6,182,212,0.2)">
+      <div class="bao-pool-row">
+        <p class="bao-pool-label">🎡 Selected Pool — ${n} numbers (top Bayesian rank)</p>
+        <div>${poolBalls}</div>
+      </div>
+    </div>` +
+    tickets.map((tkt, i) => {
+      const balls = tkt.map(n => `<span class="tball tball-hot">${n}</span>`).join("");
+      const delay = i * 40;
+      return `<div class="ticket-card" style="animation-delay:${delay}ms">
+        <p class="bao-ticket-num">Ticket ${i + 1} of ${tickets.length}</p>
+        <div class="ticket-balls">${balls}</div>
+        <div class="ticket-actions">
+          <button class="copy-btn" onclick="copyTicket('${tkt.join(", ")}',this)">Copy</button>
+        </div>
+      </div>`;
+    }).join("");
+
+  $("bao-section").style.display = "block";
+  $("bao-section").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Expose unlockBaoCard for post-data-load calls
+export { unlockBaoCard };
+
