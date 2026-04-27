@@ -1,76 +1,136 @@
 /**
- * scorer.js
- * Ticket Statistical Confidence Score engine.
- * 
- * Score (0–100) = Hot Ratio×40 + Overdue Ratio×30 + Pair Strength×20 + Range Spread×10
+ * scorer.js — Bayesian-Enhanced Ticket Scoring Engine
+ *
+ * Score S(ω) ∈ [0, 100] is a composite of four statistically grounded components:
+ *
+ *   S = 0.40 · S_bayes  + 0.30 · S_gap  + 0.20 · S_pair  + 0.10 · S_spread
+ *
+ *   S_bayes  — Mean Bayesian posterior rank percentile of ticket balls
+ *               Uses Beta(α₀+k, β₀+n−k) posterior, NOT raw counts.
+ *               Range: balls ranked by posterior mean, top ball = 100.
+ *
+ *   S_gap    — Geometric Z-score of gap, normalised to [0,100].
+ *               Z_gap(b) = (gap_b − μ_G) / σ_G  where G ~ Geometric(6/maxVal).
+ *               Positive Z = ball is overdue beyond expected geometric mean.
+ *               Score = Φ(Z_gap) × 100  (CDF of standard normal).
+ *
+ *   S_pair   — Mean pair lift ratio, normalised to [0, 100].
+ *               Lift = observed_pairs / expected_pairs under hypergeometric null.
+ *               Lift > 1 means the pair co-occurs more than chance predicts.
+ *
+ *   S_spread — Range entropy of ticket as fraction of maximum possible spread.
+ *               Penalises clustering; rewards uniform coverage of the number line.
+ *
+ * IMPORTANT: A high score means the ticket reflects historically anomalous
+ * statistical patterns. It does NOT imply a higher probability of winning.
+ * The ground truth probability remains 1/C(maxVal,6) for all tickets.
  */
+
+// ── localStorage constants ────────────────────────────────────────────────────
+const STORAGE_KEY = "vietlott_saved_picks";
+const MAX_SAVED   = 20;
+
+// ── Standard normal CDF approximation ────────────────────────────────────────
+// Hart (1968) rational approximation, |ε| < 7.5 × 10⁻⁸
+function normalCDF(z) {
+  if (z < -8) return 0;
+  if (z >  8) return 1;
+  const sign = z >= 0 ? 1 : -1;
+  const x    = Math.abs(z) / Math.SQRT2;
+  // erfc approximation via Horner's method
+  const t    = 1 / (1 + 0.3275911 * x);
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 +
+               t * (-1.453152027 + t * 1.061405429))));
+  const erfc = poly * Math.exp(-x * x);
+  return 0.5 * (1 + sign * (1 - erfc));
+}
 
 /**
  * Score a single ticket against the fitted FrequencyModel.
- * @param {number[]}       ticket      – sorted array of 6 ball numbers
- * @param {FrequencyModel} freqModel   – fitted model
- * @param {number[][]}     matrix      – full draw matrix (for gap analysis)
- * @returns {{ total: number, breakdown: object }}
+ * @param {number[]}       ticket     — sorted array of 6 ball numbers
+ * @param {FrequencyModel} freqModel  — fitted Bayesian model
+ * @param {number[][]}     matrix     — full draw matrix
+ * @returns {{ total, breakdown, tier, label }}
  */
 export function scoreTicket(ticket, freqModel, matrix) {
-  const maxVal   = freqModel.maxVal;
-  const nDraws   = matrix.length;
-  const counts   = freqModel.counts;
+  const maxVal = freqModel.maxVal;
+  const n      = matrix.length;
 
-  // ── 1. Hot ratio (40%) ──────────────────────────────────────────────────
-  // A ball is "hot" if it's in the top 33% by appearance count
-  const threshold = Math.ceil(maxVal * 0.33);
-  const hotSet    = new Set(freqModel.hotNumbers.slice(0, threshold));
-  const hotCount  = ticket.filter(b => hotSet.has(b)).length;
-  const hotScore  = (hotCount / ticket.length) * 100;
+  // ── Component 1: Bayesian Posterior Rank Score (40%) ─────────────────────
+  // Rank all balls by posterior mean (1 = hottest).
+  // Score = mean percentile rank of ticket balls (100 = all balls top-third).
+  const allBalls = Array.from({ length: maxVal }, (_, i) => i + 1);
+  const sorted   = [...allBalls].sort((a, b) =>
+    freqModel.bayesianP(b) - freqModel.bayesianP(a)
+  );
+  const rankMap = new Map(sorted.map((b, i) => [b, i + 1]));
 
-  // ── 2. Overdue ratio (30%) ──────────────────────────────────────────────
-  // A ball is "overdue" if it hasn't appeared in the last 10+ draws
-  const gaps         = freqModel.gapAnalysis();
-  const overdueCount = ticket.filter(b => gaps[b] >= 10).length;
-  const overdueScore = (overdueCount / ticket.length) * 100;
+  const rankPercentiles = ticket.map(b => {
+    const rank = rankMap.get(b) || maxVal;
+    return (1 - (rank - 1) / (maxVal - 1)) * 100; // 100 = rank 1, 0 = rank maxVal
+  });
+  const bayesScore = rankPercentiles.reduce((s, v) => s + v, 0) / ticket.length;
 
-  // ── 3. Pair co-occurrence strength (20%) ────────────────────────────────
-  // Average pairwise co-occurrence score, normalised against expected random rate
-  const expectedPairRate = (nDraws * 6 * 5) / (2 * maxVal * (maxVal - 1)); // rough E[pair count]
-  let pairTotal = 0, pairCount = 0;
+  // ── Component 2: Geometric Gap Score (30%) ────────────────────────────────
+  // Z_gap(b) = (gap_b − μ_G) / σ_G,  where μ_G = maxVal/pick, σ_G = sqrt((1−p)/p²)
+  // Map each Z_gap through Φ (normal CDF) to get a probability ∈ (0,1).
+  // Score = mean Φ(Z_gap) × 100 across ticket balls.
+  // Φ(0) = 0.5 (ball at exactly expected gap → neutral score of 50).
+  // Φ(+∞) → 1.0 (extremely overdue → score approaches 100).
+  const gapScores = ticket.map(b => normalCDF(freqModel.gapZ(b)) * 100);
+  const gapScore  = gapScores.reduce((s, v) => s + v, 0) / ticket.length;
+
+  // ── Component 3: Pair Lift Score (20%) ───────────────────────────────────
+  // For all C(6,2) = 15 pairs in the ticket, compute mean lift.
+  // Expected lift under H₀ = 1.0. Normalise: lift 2 → 100, lift 0 → 0.
+  let liftSum = 0, liftCount = 0;
   for (let i = 0; i < ticket.length; i++) {
     for (let j = i + 1; j < ticket.length; j++) {
-      const a   = Math.min(ticket[i], ticket[j]);
-      const b   = Math.max(ticket[i], ticket[j]);
-      const key = `${a},${b}`;
-      pairTotal += freqModel.pairMap.get(key) || 0;
-      pairCount++;
+      liftSum += freqModel.pairLift(ticket[i], ticket[j]);
+      liftCount++;
     }
   }
-  const avgPair   = pairCount > 0 ? pairTotal / pairCount : 0;
-  const pairScore = Math.min(100, (avgPair / Math.max(1, expectedPairRate)) * 50);
+  const avgLift   = liftCount > 0 ? liftSum / liftCount : 1;
+  // Normalise: lift of 2× expected → 100, lift of 0 → 0, expected (1×) → 50
+  const pairScore = Math.min(100, Math.max(0, avgLift * 50));
 
-  // ── 4. Range spread (10%) ───────────────────────────────────────────────
-  // Reward tickets that cover a wide numerical spread (not all low or all high)
+  // ── Component 4: Range Spread Score (10%) ────────────────────────────────
+  // Penalise clustering. Score = (max − min) / (maxVal − 1) × 100.
+  // A ticket spanning [1, 55] scores 100; [20, 25] scores ~9.
   const min     = Math.min(...ticket);
   const max     = Math.max(...ticket);
-  const spread  = max - min;
-  const spreadScore = Math.min(100, (spread / (maxVal - 1)) * 100);
+  const spread  = Math.min(100, ((max - min) / (maxVal - 1)) * 100);
 
-  // ── Weighted composite ──────────────────────────────────────────────────
+  // ── Composite score ───────────────────────────────────────────────────────
   const total = Math.round(
-    hotScore    * 0.40 +
-    overdueScore * 0.30 +
-    pairScore   * 0.20 +
-    spreadScore * 0.10
+    bayesScore * 0.40 +
+    gapScore   * 0.30 +
+    pairScore  * 0.20 +
+    spread     * 0.10
   );
+  const clamped = Math.max(0, Math.min(100, total));
+
+  const tier  = clamped >= 70 ? "gold" : clamped >= 40 ? "neutral" : "low";
+  const label = clamped >= 70 ? "Strong Pick" : clamped >= 40 ? "Moderate" : "Low Signal";
 
   return {
-    total: Math.max(0, Math.min(100, total)),
+    total: clamped,
     breakdown: {
-      hot:     Math.round(hotScore),
-      overdue: Math.round(overdueScore),
+      bayes:   Math.round(bayesScore),
+      gap:     Math.round(gapScore),
       pair:    Math.round(pairScore),
-      spread:  Math.round(spreadScore),
+      spread:  Math.round(spread),
     },
-    tier: total >= 70 ? "gold" : total >= 40 ? "neutral" : "low",
-    label: total >= 70 ? "Strong Pick" : total >= 40 ? "Moderate" : "Low Signal",
+    tier,
+    label,
+    // Expose raw Z-scores and lifts for transparency
+    meta: {
+      avgGapZ:     +(gapScores.map((_, i) => freqModel.gapZ(ticket[i]))
+                      .reduce((s, v) => s + v, 0) / ticket.length).toFixed(3),
+      avgBayesP:   +(ticket.map(b => freqModel.bayesianP(b))
+                      .reduce((s, v) => s + v, 0) / ticket.length).toFixed(5),
+      avgPairLift: +avgLift.toFixed(3),
+    }
   };
 }
 
@@ -83,14 +143,10 @@ export function scoreAndRank(tickets, freqModel, matrix) {
     .sort((a, b) => b.score.total - a.score.total);
 }
 
-// ── localStorage persistence ───────────────────────────────────────────────
-const STORAGE_KEY = "vietlott_saved_picks";
-const MAX_SAVED   = 20;
-
+// ── localStorage persistence ──────────────────────────────────────────────────
 export function loadSavedPicks() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+  catch { return []; }
 }
 
 export function savePick(ticket, scoreResult, game) {
@@ -103,6 +159,7 @@ export function savePick(ticket, scoreResult, game) {
     tier:      scoreResult.tier,
     label:     scoreResult.label,
     breakdown: scoreResult.breakdown,
+    meta:      scoreResult.meta || {},
     savedAt:   new Date().toISOString(),
   };
   picks.unshift(entry);

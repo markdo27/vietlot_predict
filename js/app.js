@@ -371,10 +371,10 @@ function renderTickets(ranked, game) {
         <div class="score-bar"><div class="score-fill ${scoreCls}" style="width:${score.total}%"></div></div>
       </div>
       <div class="score-breakdown">
-        <span>🔥 Hot ${score.breakdown.hot}</span>
-        <span>⏳ Overdue ${score.breakdown.overdue}</span>
-        <span>🔗 Pair ${score.breakdown.pair}</span>
-        <span>↔ Spread ${score.breakdown.spread}</span>
+        <span title="Bayesian posterior rank">📊 Bayes ${score.breakdown.bayes}</span>
+        <span title="Geometric gap Z-score">⏳ Gap ${score.breakdown.gap}</span>
+        <span title="Pair co-occurrence lift">🔗 Lift ${score.breakdown.pair}</span>
+        <span title="Number range spread">↔ Spread ${score.breakdown.spread}</span>
       </div>
       <div class="ticket-actions">
         <button class="copy-btn" onclick="copyTicket('${ticket.join(", ")}', this)">Copy</button>
