@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vietlott ML — Power 6/55 & Mega 6/45 Prediction Tool</title>
-  <meta name="description" content="Smart statistical analysis for Vietlott Power 6/55 and Mega 6/45 — hot/cold numbers, gap tracker, scored ticket picks." />
+  <title>Vietlott Phân Tích — Dự Đoán Power 6/55 & Mega 6/45</title>
+  <meta name="description" content="Phân tích thống kê xổ số Vietlott Power 6/55 và Mega 6/45 — số nóng/lạnh, khoảng cách, bộ số được chấm điểm." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
   <link rel="stylesheet" href="css/style.css" />
@@ -17,23 +17,27 @@
 
   <!-- Header -->
   <header class="site-header">
-    <div class="logo">🎱</div>
-    <div>
-      <h1>Vietlott <span>ML Predictor</span></h1>
-      <p class="header-sub">Power 6/55 · Mega 6/45 · Statistical Intelligence</p>
+    <div class="logo-mark">
+      <span class="logo-ball">6</span>
+      <span class="logo-slash">/</span>
+      <span class="logo-ball logo-ball-2">55</span>
+    </div>
+    <div class="header-text">
+      <h1>Vietlott <span>Phân Tích</span></h1>
+      <p class="header-sub">Thống kê · Dự đoán · Power 6/55 · Mega 6/45</p>
     </div>
     <div class="header-actions">
       <button class="saved-toggle-btn" id="saved-toggle-btn">
-        💾 Saved Picks <span class="saved-count" id="saved-count">0</span>
+        Vé đã lưu <span class="saved-count" id="saved-count">0</span>
       </button>
     </div>
   </header>
 
   <!-- Disclaimer -->
   <div id="disclaimer" role="alert">
-    <span class="disc-icon">⚠️</span>
-    <div><strong>Educational &amp; Experimental Use Only.</strong> Lottery draws are certified random events. Scores reflect historical statistical patterns only — not future outcomes. Play responsibly.</div>
-    <button id="dismiss-disclaimer" aria-label="Dismiss">✕</button>
+    <span class="disc-icon">⚠</span>
+    <div><strong>Chỉ mang tính tham khảo.</strong> Xổ số là sự kiện ngẫu nhiên có chứng nhận. Điểm số phản ánh quy luật thống kê lịch sử — không phải kết quả tương lai. Hãy chơi có trách nhiệm.</div>
+    <button id="dismiss-disclaimer" aria-label="Đóng">✕</button>
   </div>
 
   <div class="main-grid">
@@ -41,29 +45,29 @@
     <!-- ══ SIDEBAR ══ -->
     <aside>
 
-      <!-- Step 1: Game Selection -->
+      <!-- Bước 1: Chọn game -->
       <div class="card">
-        <p class="card-title">Step 1 — Choose Your Game</p>
+        <p class="card-label">Bước 1 — Chọn loại xổ số</p>
         <div class="game-cards">
           <button class="game-card" id="btn-power655" data-game="power655">
             <span class="game-icon">⚡</span>
             <span class="game-name">Power 6/55</span>
-            <span class="game-meta">Pick 6 from 1–55</span>
-            <span class="game-draws" id="draws-power655">1,339 draws</span>
+            <span class="game-meta">Chọn 6 từ 1–55</span>
+            <span class="game-draws" id="draws-power655">1.339 kỳ</span>
           </button>
           <button class="game-card" id="btn-mega645" data-game="mega645">
             <span class="game-icon">🌀</span>
             <span class="game-name">Mega 6/45</span>
-            <span class="game-meta">Pick 6 from 1–45</span>
-            <span class="game-draws" id="draws-mega645">1,304 draws</span>
+            <span class="game-meta">Chọn 6 từ 1–45</span>
+            <span class="game-draws" id="draws-mega645">1.304 kỳ</span>
           </button>
         </div>
         <div id="status-msg" class="status-msg" role="status"></div>
       </div>
 
-      <!-- Step 2: Ticket Count -->
+      <!-- Bước 2: Số vé -->
       <div class="card" id="step2-card" style="opacity:0.4;pointer-events:none">
-        <p class="card-title">Step 2 — How Many Tickets?</p>
+        <p class="card-label">Bước 2 — Số lượng vé</p>
         <div class="stepper-row">
           <button class="stepper-btn" id="step-down">−</button>
           <span class="stepper-val" id="stepper-val">5</span>
@@ -72,40 +76,40 @@
         <input type="hidden" id="ticket-count" value="5" />
       </div>
 
-      <!-- Expert Settings (collapsed) -->
+      <!-- Cài đặt nâng cao -->
       <div class="card" id="expert-card" style="opacity:0.4;pointer-events:none">
         <button class="accordion-toggle" id="expert-toggle" aria-expanded="false">
-          <span>⚙️ Expert Settings</span>
+          <span>⚙ Cài đặt nâng cao</span>
           <span class="accordion-arrow" id="expert-arrow">▼</span>
         </button>
         <div class="accordion-body" id="expert-body" style="display:none">
           <div class="form-group">
-            <label for="mode-select">Prediction Mode</label>
+            <label for="mode-select">Phương pháp dự đoán</label>
             <select id="mode-select">
-              <option value="frequency">📊 Frequency Analysis (Fast)</option>
-              <option value="lstm">🧠 LSTM Neural Network (~60s)</option>
-              <option value="ensemble">✨ Ensemble (LSTM + Frequency)</option>
+              <option value="frequency">📊 Phân tích tần suất (Nhanh)</option>
+              <option value="lstm">🧠 Mạng LSTM (≈60 giây)</option>
+              <option value="ensemble">✦ Kết hợp (LSTM + Tần suất)</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="strategy-select">Sampling Strategy</label>
+            <label for="strategy-select">Chiến lược chọn số</label>
             <select id="strategy-select">
-              <option value="all">All (cycle through strategies)</option>
-              <option value="hot">🔥 Hot Numbers</option>
-              <option value="cold">🧊 Cold / Overdue</option>
-              <option value="mixed">⚖️ Mixed</option>
-              <option value="pair">🔗 Best Pairs</option>
+              <option value="all">Tất cả (xoay vòng chiến lược)</option>
+              <option value="hot">🔥 Số nóng</option>
+              <option value="cold">🧊 Số lạnh / Quá hạn</option>
+              <option value="mixed">⚖ Hỗn hợp</option>
+              <option value="pair">🔗 Cặp số tốt nhất</option>
             </select>
           </div>
           <div id="lstm-options" style="display:none">
-            <p class="card-title" style="margin-top:4px;color:#f59e0b">🧪 Experimental — Neural Network</p>
+            <p class="card-label" style="margin-top:4px;color:#e67e22">🧪 Thử nghiệm — Mạng nơ-ron</p>
             <div class="two-col">
               <div class="form-group">
-                <label for="seq-len">Seq Length</label>
+                <label for="seq-len">Độ dài chuỗi</label>
                 <input type="number" id="seq-len" value="10" min="3" max="50" />
               </div>
               <div class="form-group">
-                <label for="epochs">Max Epochs</label>
+                <label for="epochs">Số epoch tối đa</label>
                 <input type="number" id="epochs" value="60" min="10" max="300" />
               </div>
             </div>
@@ -113,28 +117,28 @@
         </div>
       </div>
 
-      <!-- Generate -->
-      <button id="generate-btn" class="generate-btn" disabled>✨ Generate My Picks</button>
+      <!-- Tạo vé -->
+      <button id="generate-btn" class="generate-btn" disabled>✦ Tạo bộ số của tôi</button>
 
-      <!-- Bao Systems -->
+      <!-- Bao số -->
       <div class="card" id="bao-card" style="opacity:0.4;pointer-events:none">
-        <p class="card-title">🎡 Bao Wheeling System</p>
+        <p class="card-label">🎡 Hệ thống bao số</p>
         <div class="bao-type-grid">
-          <button class="bao-type-btn" id="bao-btn-bao5" data-bao="bao5">Bao 5<span>5-Guarantee</span></button>
-          <button class="bao-type-btn" id="bao-btn-bao7" data-bao="bao7">Bao 7<span>7 tickets</span></button>
-          <button class="bao-type-btn" id="bao-btn-bao8" data-bao="bao8">Bao 8<span>28 tickets</span></button>
-          <button class="bao-type-btn" id="bao-btn-bao9" data-bao="bao9">Bao 9<span>84 tickets</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao5" data-bao="bao5">Bao 5<span>Đảm bảo 5 số</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao7" data-bao="bao7">Bao 7<span>7 vé</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao8" data-bao="bao8">Bao 8<span>28 vé</span></button>
+          <button class="bao-type-btn" id="bao-btn-bao9" data-bao="bao9">Bao 9<span>84 vé</span></button>
         </div>
-        <p class="bao-hint">Pool is auto-selected from top Bayesian-ranked numbers</p>
-        <button id="bao-generate-btn" class="generate-btn" style="margin-top:10px;background:linear-gradient(135deg,#0e7490,#06b6d4)" disabled>🎡 Generate Bao Tickets</button>
+        <p class="bao-hint">Pool tự động chọn từ các số xếp hạng Bayesian cao nhất</p>
+        <button id="bao-generate-btn" class="generate-btn bao-gen-btn" disabled>🎡 Tạo vé bao số</button>
       </div>
 
-      <!-- Upload fallback -->
+      <!-- Tải dữ liệu -->
       <div class="card upload-card">
-        <p class="card-title">📂 Or Upload Your Own Data</p>
+        <p class="card-label">📂 Tải dữ liệu của bạn</p>
         <div id="drop-zone" role="button" tabindex="0">
-          <div class="drop-icon">⬆️</div>
-          <p class="drop-label">Drop .jsonl or .csv here</p>
+          <div class="drop-icon">↑</div>
+          <p class="drop-label">Kéo thả file .jsonl hoặc .csv vào đây</p>
         </div>
         <input type="file" id="file-input" accept=".jsonl,.json,.csv" />
       </div>
@@ -144,31 +148,31 @@
     <!-- ══ MAIN PANEL ══ -->
     <main id="main-panel">
 
-      <!-- Empty state -->
+      <!-- Trạng thái rỗng -->
       <div class="empty-state" id="empty-state">
-        <div class="empty-icon">🎱</div>
-        <h2>Select a game to get started</h2>
-        <p>Click ⚡ Power 6/55 or 🌀 Mega 6/45 to instantly load 1,300+ real historical draws and start analysing. <em>Database cập nhật: 30/04/2026</em></p>
+        <div class="empty-icon">○</div>
+        <h2>Chọn loại xổ số để bắt đầu</h2>
+        <p>Nhấn <strong>Power 6/55</strong> hoặc <strong>Mega 6/45</strong> để tải ngay hơn 1.300 kỳ quay lịch sử thực và bắt đầu phân tích.</p>
+        <p class="empty-note">Cơ sở dữ liệu cập nhật đến: <strong>30/04/2026</strong></p>
       </div>
 
-      <!-- Last 10 Draws -->
+      <!-- 10 kỳ gần nhất -->
       <div class="card" id="last10-section" style="display:none">
-        <p class="card-title">🕐 Last 10 Draws</p>
+        <p class="card-label">🕐 10 kỳ quay gần nhất</p>
         <div class="table-wrap">
           <table class="draws-table" id="last10-table">
-            <thead><tr><th>#</th><th>Date</th><th colspan="6">Numbers</th></tr></thead>
+            <thead><tr><th>Kỳ</th><th>Ngày</th><th colspan="6">Các số</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-      <!-- ══ DRAW ANALYSIS REPORT ══ -->
+      <!-- ══ BÁO CÁO PHÂN TÍCH ══ -->
       <div class="card" id="draw-analysis-section" style="display:none">
 
-        <!-- Header row -->
         <div class="analysis-header">
           <div style="display:flex;align-items:center;gap:10px;flex:1">
-            <p class="card-title" style="margin-bottom:0">🔬 Phân Tích Chi Tiết Kỳ Gần Nhất</p>
+            <p class="card-label" style="margin-bottom:0">🔬 Phân Tích Chi Tiết Kỳ Gần Nhất</p>
             <div class="draw-count-toggle" id="draw-count-toggle">
               <button class="draw-count-btn" data-n="5">5 kỳ</button>
               <button class="draw-count-btn active" data-n="10">10 kỳ</button>
@@ -176,29 +180,23 @@
             </div>
           </div>
           <button class="analysis-refresh-btn" id="analysis-refresh-btn">
-            <span class="spin">🔄</span> Làm mới
+            <span class="spin">↻</span> Làm mới
           </button>
         </div>
 
-        <!-- Summary metrics -->
         <div class="analysis-summary-grid" id="analysis-summary-grid"></div>
-
-        <!-- Significance alert -->
         <div id="analysis-sig-alert" style="display:none"></div>
 
-        <!-- Tab navigation -->
         <div class="analysis-tabs">
-          <button class="analysis-tab active" data-tab="tab-byball">📊 Theo Từng Số</button>
-          <button class="analysis-tab" data-tab="tab-bydraw">📅 Theo Từng Kỳ</button>
-          <button class="analysis-tab" data-tab="tab-pairs">🔗 Cặp Số</button>
+          <button class="analysis-tab active" data-tab="tab-byball">Theo từng số</button>
+          <button class="analysis-tab" data-tab="tab-bydraw">Theo từng kỳ</button>
+          <button class="analysis-tab" data-tab="tab-pairs">Cặp số</button>
         </div>
 
-        <!-- Tab: Per-ball report -->
         <div class="analysis-tab-panel active" id="tab-byball">
           <div class="ball-report-grid" id="ball-report-grid"></div>
         </div>
 
-        <!-- Tab: Per-draw table -->
         <div class="analysis-tab-panel" id="tab-bydraw">
           <div class="table-wrap">
             <table class="draw-by-draw-table" id="draw-by-draw-table">
@@ -206,10 +204,10 @@
                 <tr>
                   <th>Kỳ</th>
                   <th>Ngày</th>
-                  <th>Các Số Quay</th>
-                  <th>Phân Loại</th>
-                  <th>Hot / Lạnh / Tăng</th>
-                  <th>Cặp Nổi Bật</th>
+                  <th>Các số quay</th>
+                  <th>Đặc điểm</th>
+                  <th>Nóng / Lạnh / Tăng</th>
+                  <th>Cặp nổi bật</th>
                 </tr>
               </thead>
               <tbody id="draw-by-draw-tbody"></tbody>
@@ -217,99 +215,97 @@
           </div>
         </div>
 
-        <!-- Tab: Pair co-occurrence -->
         <div class="analysis-tab-panel" id="tab-pairs">
           <div id="pair-analysis-content"></div>
         </div>
 
       </div>
 
-      <!-- Ball Stats -->
+      <!-- Thống kê số -->
       <div class="card" id="stats-panel" style="display:none">
-        <p class="card-title">📊 Ball Statistics <span style="font-size:0.65rem;color:var(--cyan-l);text-transform:none;font-weight:400">(ranked by 60% recent + 40% all-time)</span></p>
+        <p class="card-label">📊 Thống kê số <span class="card-label-note">(xếp hạng 60% gần đây + 40% toàn thời gian)</span></p>
         <div class="stats-grid">
           <div class="stat-section">
-            <p class="stat-label hot">🔥 Hottest (Blended)</p>
+            <p class="stat-label hot">🔥 Số nóng nhất</p>
             <div class="balls-row" id="hot-balls"></div>
           </div>
           <div class="stat-section">
-            <p class="stat-label cold">🧊 Coldest (Blended)</p>
+            <p class="stat-label cold">🧊 Số lạnh nhất</p>
             <div class="balls-row" id="cold-balls"></div>
           </div>
           <div class="stat-section">
-            <p class="stat-label overdue">⏳ Most Overdue</p>
+            <p class="stat-label overdue">⏳ Vắng mặt lâu nhất</p>
             <div class="balls-row" id="overdue-balls"></div>
           </div>
         </div>
       </div>
 
-      <!-- Trending Numbers -->
+      <!-- Xu hướng -->
       <div class="card" id="trending-section" style="display:none">
-        <p class="card-title">📈 Trending — Last 50 Draws vs All-Time</p>
+        <p class="card-label">📈 Xu hướng — 50 kỳ gần nhất so với toàn bộ lịch sử</p>
         <div class="trending-grid">
           <div>
-            <p class="stat-label" style="color:#22d3ee;margin-bottom:8px">⬆ Rising (appearing more recently)</p>
+            <p class="stat-label" style="color:#27ae60;margin-bottom:8px">⬆ Đang tăng (xuất hiện nhiều hơn gần đây)</p>
             <div class="balls-row" id="trending-up-balls"></div>
           </div>
           <div>
-            <p class="stat-label" style="color:#f87171;margin-bottom:8px">⬇ Fading (appearing less recently)</p>
+            <p class="stat-label" style="color:#e74c3c;margin-bottom:8px">⬇ Đang giảm (xuất hiện ít hơn gần đây)</p>
             <div class="balls-row" id="trending-down-balls"></div>
           </div>
         </div>
       </div>
 
-
-      <!-- Gap Tracker -->
+      <!-- Khoảng cách -->
       <div class="card" id="gap-section" style="display:none">
-        <p class="card-title">📅 Gap Tracker — Draws Since Last Appearance</p>
+        <p class="card-label">📅 Theo dõi khoảng cách — Số kỳ kể từ lần xuất hiện cuối</p>
         <div class="gap-grid" id="gap-grid"></div>
       </div>
 
-      <!-- Frequency Chart -->
+      <!-- Biểu đồ tần suất -->
       <div class="card" id="chart-section" style="display:none">
-        <p class="card-title">📈 Ball Frequency Distribution
-          <span style="float:right;font-size:0.7rem"><span style="color:#a855f7">■</span> Hot &nbsp;<span style="color:#06b6d4">■</span> Others</span>
+        <p class="card-label">📈 Phân phối tần suất số
+          <span style="float:right;font-size:0.7rem;font-weight:400;text-transform:none;letter-spacing:0">
+            <span style="color:#8e44ad">■</span> Nóng &nbsp;<span style="color:#2980b9">■</span> Còn lại
+          </span>
         </p>
         <div class="chart-wrap"><canvas id="freq-chart"></canvas></div>
       </div>
 
-      <!-- LSTM Training -->
+      <!-- Huấn luyện LSTM -->
       <div class="card" id="training-section" style="display:none">
-        <p class="card-title">🧠 LSTM Training Progress</p>
+        <p class="card-label">🧠 Tiến trình huấn luyện LSTM</p>
         <div class="chart-wrap"><canvas id="loss-chart"></canvas></div>
         <p id="epoch-progress"></p>
       </div>
 
-      <!-- Results -->
+      <!-- Kết quả -->
       <div id="results-section" style="display:none">
-        <p class="section-title">🎰 Your Picks</p>
+        <p class="section-title">Bộ số của bạn</p>
         <div class="tickets-grid" id="tickets-container"></div>
       </div>
 
-      <!-- Bao Results -->
+      <!-- Kết quả bao số -->
       <div id="bao-section" style="display:none">
         <div class="section-title-row">
-          <p class="section-title" style="margin-bottom:0">🎡 Bao Tickets</p>
+          <p class="section-title" style="margin-bottom:0">🎡 Vé bao số</p>
           <span class="bao-meta-badge" id="bao-meta-badge"></span>
         </div>
-        <!-- Win Rate Table -->
         <div class="card bao-winrate-card">
-          <p class="card-title">📊 Win Rate Analysis</p>
+          <p class="card-label">📊 Phân tích tỷ lệ thắng</p>
           <div class="bao-info-row" id="bao-info-row"></div>
           <table class="bao-table" id="bao-table">
-            <thead><tr><th>Match</th><th>Prize</th><th>Probability</th><th>1 in N</th><th>Guaranteed if…</th></tr></thead>
+            <thead><tr><th>Trúng</th><th>Giải thưởng</th><th>Xác suất</th><th>1 trong N</th><th>Đảm bảo nếu…</th></tr></thead>
             <tbody id="bao-table-body"></tbody>
           </table>
         </div>
-        <!-- Bao Tickets Grid -->
         <div class="tickets-grid" id="bao-tickets-container"></div>
       </div>
 
-      <!-- Saved Picks -->
+      <!-- Vé đã lưu -->
       <div id="saved-section" style="display:none">
         <div class="section-title-row">
-          <p class="section-title" style="margin-bottom:0">💾 Saved Picks</p>
-          <button class="clear-btn" id="clear-saved-btn">Clear All</button>
+          <p class="section-title" style="margin-bottom:0">Vé đã lưu</p>
+          <button class="clear-btn" id="clear-saved-btn">Xoá tất cả</button>
         </div>
         <div class="tickets-grid" id="saved-container"></div>
       </div>
@@ -320,7 +316,6 @@
 
 <script type="module" src="./js/app.js"></script>
 <script>
-  // Stepper controls
   const val = document.getElementById("stepper-val");
   const inp = document.getElementById("ticket-count");
   document.getElementById("step-down").addEventListener("click", () => {

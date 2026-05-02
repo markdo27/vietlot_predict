@@ -1,4 +1,4 @@
-/**
+﻿/**
  * app.js — Refactored application controller (Sprints 1–3)
  */
 import { parseFile, detectGame, getMatrix, GAME_CONFIG } from "./data-ingestion.js";
@@ -66,7 +66,7 @@ async function loadFromUrl(url, filename, game, card) {
 
     card.classList.remove("loading");
     card.classList.add("active");
-    showStatus("success", `✓ ${state.records.length} draws loaded`);
+    showStatus("success", `✓ ${state.records.length} kỳ đã tải`);
 
     // Unlock step 2 + expert card
     $("step2-card").style.opacity = "1";
@@ -110,7 +110,7 @@ async function handleUpload(file) {
   const text = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = e => res(e.target.result);
-    r.onerror = () => rej(new Error("File read error"));
+    r.onerror = () => rej(new Error("Lỗi đọc file"));
     r.readAsText(file, "utf-8");
   });
   try {
@@ -121,7 +121,7 @@ async function handleUpload(file) {
 
     $("drop-zone").classList.add("has-file");
     $("drop-zone").querySelector(".drop-label").textContent = `${file.name} — ${state.records.length} draws`;
-    showStatus("success", `✓ ${state.records.length} draws loaded`);
+    showStatus("success", `✓ ${state.records.length} kỳ đã tải`);
 
     $("step2-card").style.opacity = "1"; $("step2-card").style.pointerEvents = "auto";
     $("expert-card").style.opacity = "1"; $("expert-card").style.pointerEvents = "auto";
@@ -504,7 +504,7 @@ function renderFreqChart() {
   const labels = Array.from({ length: cfg.max }, (_, i) => i + 1);
   const data   = labels.map(b => state.freqModel.counts[b] || 0);
   const hotSet = new Set(state.freqModel.hotNumbers);
-  const colors = labels.map(b => hotSet.has(b) ? "rgba(168,85,247,0.85)" : "rgba(6,182,212,0.5)");
+  const colors = labels.map(b => hotSet.has(b) ? "rgba(192,57,43,0.85)" : "rgba(41,128,185,0.5)");
 
   if (state.chart) state.chart.destroy();
   state.chart = new Chart($("freq-chart").getContext("2d"), {
@@ -512,7 +512,7 @@ function renderFreqChart() {
     data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 3, borderSkipped: false }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Ball ${c.label}: ${c.raw} draws` } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Số ${c.label}: ${c.raw} lần` } } },
       scales: {
         x: { ticks: { color: "#64748b", font: { size: 9 } }, grid: { color: "rgba(255,255,255,0.04)" } },
         y: { ticks: { color: "#64748b" }, grid: { color: "rgba(255,255,255,0.04)" } }
@@ -531,8 +531,8 @@ function initLossChart() {
     data: {
       labels: [],
       datasets: [
-        { label: "Train", data: [], borderColor: "#a855f7", backgroundColor: "rgba(168,85,247,0.1)", tension: 0.4, fill: true, pointRadius: 0 },
-        { label: "Val",   data: [], borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", tension: 0.4, fill: true, pointRadius: 0, borderDash: [4,3] }
+        { label: "Train", data: [], borderColor: "#c0392b", backgroundColor: "rgba(192,57,43,0.08)", tension: 0.4, fill: true, pointRadius: 0 },
+        { label: "Val",   data: [], borderColor: "#2980b9", backgroundColor: "rgba(41,128,185,0.06)", tension: 0.4, fill: true, pointRadius: 0, borderDash: [4,3] }
       ]
     },
     options: {
@@ -565,7 +565,7 @@ async function onGenerate() {
   const game     = state.game;
 
   $("generate-btn").disabled = true;
-  $("generate-btn").textContent = "Working…";
+  $("generate-btn").textContent = "Đang xử lý…";
   $("results-section").style.display = "none";
 
   try {
@@ -574,35 +574,35 @@ async function onGenerate() {
     if (mode !== "frequency" && (!lstmModel || state.trainedMode !== mode)) {
       const { buildLSTMModel: buildM, buildSequences: buildS, trainLSTM: trainM } = await import("./lstm-model.js");
       const cfg = GAME_CONFIG[game];
-      showStatus("loading", "Building LSTM sequences…");
+      showStatus("loading", "Đang chuẩn bị dữ liệu LSTM…");
       const { xs, ys } = buildS(state.matrix, seqLen, cfg.max);
       lstmModel = buildM(seqLen);
       $("training-section").style.display = "block";
       initLossChart();
-      showStatus("loading", "Training LSTM… (~60s)");
+      showStatus("loading", "Đang huấn luyện LSTM… (~60 giây)");
       await trainM(lstmModel, xs, ys, { epochs, batchSize: 32 },
         (ep, tot, logs, lH, vH) => updateLossChart(ep, tot, logs, lH, vH));
       xs.dispose(); ys.dispose();
       state.lstmModel = lstmModel;
       state.trainedMode = mode;
-      showStatus("success", "✓ Training complete");
+      showStatus("success", "✓ Huấn luyện hoàn tất");
     }
 
-    showStatus("loading", "Generating tickets…");
+    showStatus("loading", "Đang tạo bộ số…");
     const { generatePredictions: genP } = await import("./predictor.js");
     const { tickets, freqModel } = await genP({ matrix: state.matrix, game, nTickets, mode, lstmModel: state.lstmModel, seqLen, strategy });
     state.freqModel = freqModel;
 
     const ranked = scoreAndRank(tickets, freqModel, state.matrix);
     renderTickets(ranked, game);
-    showStatus("success", `✓ ${tickets.length} tickets generated`);
+    showStatus("success", `✓ ${tickets.length} bộ số đã tạo`);
 
   } catch (err) {
     showStatus("error", `✗ ${err.message}`);
     console.error(err);
   } finally {
     $("generate-btn").disabled = false;
-    $("generate-btn").textContent = "✨ Generate My Picks";
+    $("generate-btn").textContent = "✦ Tạo bộ số của tôi";
   }
 }
 
@@ -645,7 +645,7 @@ function renderTickets(ranked, game) {
         <span title="Number range spread">↔ Spread ${score.breakdown.spread}</span>
       </div>
       <div class="ticket-actions">
-        <button class="copy-btn" onclick="copyTicket('${ticket.join(", ")}', this)">Copy</button>
+        <button class="Sao chép-btn" onclick="Sao chépTicket('${ticket.join(", ")}', this)">Sao chép</button>
         <button class="save-btn" id="save-${i}" onclick="saveTicketByIdx(${i}, 'save-${i}')">💾 Save</button>
       </div>
     </div>`;
@@ -677,8 +677,8 @@ function renderSavedPanel() {
       </div>
       <div class="ticket-balls">${balls}</div>
       <div class="ticket-actions">
-        <button class="copy-btn" onclick="copyTicket('${p.ticket.join(", ")}', this)">Copy</button>
-        <button class="copy-btn delete-btn" onclick="doDeletePick(${p.id})">🗑 Remove</button>
+        <button class="Sao chép-btn" onclick="Sao chépTicket('${p.ticket.join(", ")}', this)">Sao chép</button>
+        <button class="Sao chép-btn delete-btn" onclick="doDeletePick(${p.id})">🗑 Remove</button>
       </div>
       <p class="saved-at">Saved ${date}</p>
     </div>`;
@@ -705,10 +705,10 @@ function toggleSavedPanel() {
 }
 
 // ── Global helpers ────────────────────────────────────────────────────────────
-window.copyTicket = (text, btn) => {
+window.Sao chépTicket = (text, btn) => {
   navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = "Copied!";
-    setTimeout(() => btn.textContent = "Copy", 1500);
+    btn.textContent = "Đã sao chép!";
+    setTimeout(() => btn.textContent = "Sao chép", 1500);
   });
 };
 
@@ -717,7 +717,7 @@ window.saveTicketByIdx = (idx, btnId) => {
   if (!cached) return;
   savePick(cached.ticket, cached.score, cached.game);
   const btn = $(btnId);
-  if (btn) { btn.textContent = "✓ Saved"; btn.classList.add("saved"); btn.onclick = null; }
+  if (btn) { btn.textContent = "✓ Đã lưu"; btn.classList.add("saved"); btn.onclick = null; }
   refreshSavedCount();
 };
 
@@ -754,7 +754,7 @@ async function onGenerateBao() {
   const maxVal = GAME_CONFIG[state.game].max;
 
   $("bao-generate-btn").disabled = true;
-  $("bao-generate-btn").textContent = "Generating…";
+  $("bao-generate-btn").textContent = "Đang tạo…";
 
   try {
     // Auto-select top-N Bayesian-ranked numbers as pool
@@ -770,7 +770,7 @@ async function onGenerateBao() {
     console.error(err);
   } finally {
     $("bao-generate-btn").disabled = false;
-    $("bao-generate-btn").textContent = "🎡 Generate Bao Tickets";
+    $("bao-generate-btn").textContent = "🎡 Tạo vé bao số";
   }
 }
 
@@ -825,7 +825,7 @@ function renderBaoResults(result) {
         <p class="bao-ticket-num">Ticket ${i + 1} of ${tickets.length}</p>
         <div class="ticket-balls">${balls}</div>
         <div class="ticket-actions">
-          <button class="copy-btn" onclick="copyTicket('${tkt.join(", ")}',this)">Copy</button>
+          <button class="Sao chép-btn" onclick="Sao chépTicket('${tkt.join(", ")}',this)">Sao chép</button>
         </div>
       </div>`;
     }).join("");
@@ -836,4 +836,5 @@ function renderBaoResults(result) {
 
 // Expose unlockBaoCard for post-data-load calls
 export { unlockBaoCard };
+
 
