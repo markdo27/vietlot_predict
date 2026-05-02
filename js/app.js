@@ -30,7 +30,84 @@ $("generate-btn").addEventListener("click", onGenerate);
 $("dismiss-disclaimer").addEventListener("click", () => $("disclaimer").style.display = "none");
 $("saved-toggle-btn").addEventListener("click", toggleSavedPanel);
 $("clear-saved-btn").addEventListener("click", () => { clearAllPicks(); renderSavedPanel(); });
+$("today-refresh-btn").addEventListener("click", () => autoBootTodayBanner());
 refreshSavedCount();
+
+// ── Auto-boot: load Power 6/55 silently & render Today Banner ─────────────────
+autoBootTodayBanner();
+
+async function autoBootTodayBanner() {
+  // Show skeleton loading balls
+  const banner = $("today-banner");
+  banner.style.display = "block";
+  ["today-hot-balls","today-overdue-balls","today-combo-balls"].forEach(id => {
+    $(id).innerHTML = Array(6).fill(`<span class="today-ball-skeleton"></span>`).join("");
+  });
+
+  try {
+    const resp = await fetch("./data/power655.jsonl?v=" + Date.now());
+    if (!resp.ok) throw new Error("fetch failed");
+    const text = await resp.text();
+
+    const records = parseFile(text, "power655.jsonl");
+    const matrix  = getMatrix(records);
+
+    // If user hasn't loaded data yet, set state silently
+    if (!state.records.length) {
+      state.records = records;
+      state.matrix  = matrix;
+      state.game    = "power655";
+    }
+
+    const { FrequencyModel } = await import("./frequency-model.js");
+    const fm = new FrequencyModel(55, 6);
+    fm.fit(matrix);
+
+    const allBalls = Array.from({ length: 55 }, (_, i) => i + 1);
+
+    // HOT: top 6 Bayesian
+    const hot = allBalls
+      .sort((a, b) => fm.bayesianP(b) - fm.bayesianP(a))
+      .slice(0, 6);
+
+    // OVERDUE: top 5 by gap (excluding already in hot)
+    const gaps = fm.gapAnalysis();
+    const overdue = allBalls
+      .filter(b => !hot.includes(b))
+      .sort((a, b) => gaps[b] - gaps[a])
+      .slice(0, 5);
+
+    // COMBO: 3 hot + 3 overdue (best blend)
+    const combo = [...hot.slice(0, 3), ...overdue.slice(0, 3)].sort((a, b) => a - b);
+
+    // Render
+    $("today-hot-balls").innerHTML = hot.map(n =>
+      `<span class="today-ball today-ball-hot" title="Bayesian rank #${hot.indexOf(n)+1}">${n}</span>`
+    ).join("");
+
+    $("today-overdue-balls").innerHTML = overdue.map(n =>
+      `<span class="today-ball today-ball-overdue" title="Chưa xuất hiện ${gaps[n]} kỳ">${n}</span>`
+    ).join("");
+
+    $("today-combo-balls").innerHTML = combo.map(n =>
+      `<span class="today-ball today-ball-combo" title="${hot.includes(n) ? '🔥 Số nóng' : '⏳ Số chờ'}">${n}</span>`
+    ).join("");
+
+    // Meta
+    const today = new Date().toLocaleDateString("vi-VN", { weekday:"long", day:"2-digit", month:"2-digit", year:"numeric" });
+    $("today-draw-date").textContent = today;
+    $("today-draw-count").textContent = records.length.toLocaleString("vi-VN");
+
+    // Update game card count too
+    const drawsEl = $("draws-power655");
+    if (drawsEl) drawsEl.textContent = records.length.toLocaleString("vi-VN") + " kỳ";
+
+  } catch(e) {
+    banner.style.display = "none";
+    console.warn("Today banner failed:", e);
+  }
+}
+
 
 // ── Game Cards (click = auto-load real data) ──────────────────────────────────
 function setupGameCards() {

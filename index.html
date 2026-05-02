@@ -33,7 +33,45 @@
     </div>
   </header>
 
-  <!-- Disclaimer -->
+
+  <!-- ══ TODAY'S PICKS BANNER ══ -->
+  <section id="today-banner" class="today-banner" style="display:none">
+    <div class="today-banner-inner">
+      <div class="today-banner-header">
+        <div class="today-banner-label">
+          <span class="today-dot"></span>
+          <span class="today-label-text">Gợi ý hôm nay</span>
+        </div>
+        <div class="today-banner-meta">
+          <span id="today-game-tag" class="today-game-tag">Power 6/55</span>
+          <span id="today-draw-date" class="today-draw-date"></span>
+        </div>
+      </div>
+
+      <div class="today-picks-row">
+        <div class="today-picks-group">
+          <div class="today-picks-title">🔥 Số nóng Bayesian</div>
+          <div class="today-balls-row" id="today-hot-balls"></div>
+        </div>
+        <div class="today-divider"></div>
+        <div class="today-picks-group">
+          <div class="today-picks-title">⏳ Số chờ xuất hiện</div>
+          <div class="today-balls-row" id="today-overdue-balls"></div>
+        </div>
+        <div class="today-divider"></div>
+        <div class="today-picks-group today-picks-featured">
+          <div class="today-picks-title">⭐ Bộ số tối ưu gợi ý</div>
+          <div class="today-balls-row" id="today-combo-balls"></div>
+        </div>
+      </div>
+
+      <div class="today-banner-footer">
+        <span>Dựa trên <strong id="today-draw-count">—</strong> kỳ lịch sử · Cập nhật tự động · Chỉ mang tính tham khảo</span>
+        <button class="today-refresh-btn" id="today-refresh-btn">↻ Cập nhật</button>
+      </div>
+    </div>
+  </section>
+
   <div id="disclaimer" role="alert">
     <span class="disc-icon">⚠</span>
     <div><strong>Chỉ mang tính tham khảo.</strong> Xổ số là sự kiện ngẫu nhiên có chứng nhận. Điểm số phản ánh quy luật thống kê lịch sử — không phải kết quả tương lai. Hãy chơi có trách nhiệm.</div>
