@@ -1,4 +1,4 @@
-﻿*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
   --bg:#f5f3ef; --surface:#ffffff; --surface2:#f0ede8; --surface3:#e8e4dd;
@@ -437,10 +437,10 @@ select:focus,input[type="number"]:focus{border-color:var(--accent)}
   width: 26px; height: 26px; border-radius: 50%;
   font-size: 0.7rem; font-weight: 700; margin: 1px;
 }
-.mb-hot  { background: linear-gradient(135deg, var(--purple-d), var(--accent)); color: #fff; }
-.mb-cold { background: linear-gradient(135deg, #0e7490, var(--blue)); color: #fff; }
-.mb-over { background: linear-gradient(135deg, #92400e, var(--amber)); color: #fff; }
-.mb-neut { background: var(--surface2); color: var(--ink-mid); }
+.mb-hot  { background: var(--accent); color: #fff; }
+.mb-cold { background: var(--blue); color: #fff; }
+.mb-over { background: var(--amber); color: #fff; }
+.mb-neut { background: var(--surface3); color: var(--ink-mid); border: 1px solid var(--border2); }
 
 /* Draw character badge */
 .char-badge {
@@ -483,12 +483,12 @@ select:focus,input[type="number"]:focus{border-color:var(--accent)}
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem; font-weight: 900;
 }
-.brc-ball.hot-rising  { background: linear-gradient(135deg, #5b21b6, #a855f7); box-shadow: 0 0 14px rgba(192,57,43,0.12); color: #fff; }
-.brc-ball.hot         { background: linear-gradient(135deg, #5b21b6, #a855f7); color: #fff; }
-.brc-ball.cold-falling{ background: linear-gradient(135deg, #0e7490, #06b6d4); color: #fff; }
-.brc-ball.cold        { background: linear-gradient(135deg, #0e7490, #06b6d4); color: #fff; }
-.brc-ball.overdue     { background: linear-gradient(135deg, #92400e, #f59e0b); box-shadow: 0 0 12px rgba(245,158,11,0.4); color: #fff; }
-.brc-ball.neutral     { background: var(--surface2); color: var(--ink-mid); }
+.brc-ball.hot-rising  { background: var(--accent); color: #fff; }
+.brc-ball.hot         { background: var(--accent); color: #fff; }
+.brc-ball.cold-falling{ background: var(--blue); color: #fff; }
+.brc-ball.cold        { background: var(--blue); color: #fff; }
+.brc-ball.overdue     { background: var(--amber); color: #fff; }
+.brc-ball.neutral     { background: var(--surface3); color: var(--ink-mid); border: 1px solid var(--border2); }
 .brc-info { flex: 1; min-width: 0; }
 .brc-type-label { font-size: 0.72rem; font-weight: 700; margin-bottom: 2px; }
 .brc-appearances { font-size: 1.05rem; font-weight: 800; color: var(--ink); }
