@@ -6,6 +6,7 @@ import { buildLSTMModel, buildSequences, trainLSTM } from "./lstm-model.js";
 import { generatePredictions } from "./predictor.js";
 import { scoreAndRank, savePick, loadSavedPicks, deletePick, clearAllPicks } from "./scorer.js";
 import { generateBao, BAO_TYPES, C } from "./bao.js";
+import { analyzeRecentDraws } from "./draw-analysis.js";
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -13,6 +14,7 @@ const state = {
   freqModel: null, lstmModel: null, trainedMode: null,
   chart: null, lossChart: null,
   baoType: "bao7",
+  analysisN: 10,   // number of draws to analyze
 };
 
 const $ = id => document.getElementById(id);
@@ -23,6 +25,7 @@ setupDropZone();
 setupExpertAccordion();
 setupModeSelect();
 setupBao();
+setupDrawAnalysisTabs();
 $("generate-btn").addEventListener("click", onGenerate);
 $("dismiss-disclaimer").addEventListener("click", () => $("disclaimer").style.display = "none");
 $("saved-toggle-btn").addEventListener("click", toggleSavedPanel);
@@ -77,6 +80,7 @@ async function loadFromUrl(url, filename, game, card) {
 
     await renderStats();
     renderLast10();
+    renderDrawAnalysis();
     renderGapTracker();
     renderFreqChart();
 
@@ -126,6 +130,7 @@ async function handleUpload(file) {
 
     await renderStats();
     renderLast10();
+    renderDrawAnalysis();
     renderGapTracker();
     renderFreqChart();
   } catch (err) {
@@ -234,6 +239,238 @@ function renderLast10() {
   }).join("");
 
   $("last10-section").style.display = "block";
+}
+
+// ── Draw Analysis Report ──────────────────────────────────────────────────────
+function renderDrawAnalysis() {
+  if (!state.records.length || !state.freqModel) return;
+  const cfg = GAME_CONFIG[state.game];
+  const n   = state.analysisN;
+  const report = analyzeRecentDraws(state.records, state.freqModel, cfg, n);
+  if (!report) return;
+
+  const { meta, summary, enriched, drawSummaries, repeatPairs } = report;
+
+  // ── Summary boxes ──────────────────────────────────────────────────────────
+  const boxes = [
+    { val: meta.analyzedDraws,              label: "Kỳ Phân Tích" },
+    { val: meta.uniqueBalls,                label: "Số Riêng Biệt" },
+    { val: `${meta.coverageRatio}%`,        label: "Độ Phủ Bảng Số" },
+    { val: summary.hotAppeared,             label: "Số HOT Xuất Hiện" },
+    { val: summary.coldAppeared,            label: "Số LẠNH Xuất Hiện" },
+    { val: meta.avgAppearances,             label: "TB Lần/Số" },
+  ];
+  $("analysis-summary-grid").innerHTML = boxes.map(b =>
+    `<div class="summary-box">
+       <div class="summary-box-val">${b.val}</div>
+       <div class="summary-box-label">${b.label}</div>
+     </div>`
+  ).join("");
+
+  // ── Significance alert ─────────────────────────────────────────────────────
+  const sigEl = $("analysis-sig-alert");
+  if (summary.sigBalls.length) {
+    const ballPills = summary.sigBalls.map(b => `<span class="sig-ball">${b}</span>`).join("");
+    sigEl.innerHTML =
+      `<div class="sig-alert">⚠️ <strong>Phát hiện ${summary.sigBalls.length} số có tần suất bất thường về mặt thống kê</strong>
+       &nbsp;(vượt ngưỡng Bonferroni p<0.05/55):<div class="sig-ball-list">${ballPills}</div></div>`;
+    sigEl.style.display = "block";
+  } else {
+    sigEl.style.display = "none";
+  }
+
+  // ── Tab 1: Per-ball cards ──────────────────────────────────────────────────
+  const maxExpPct = (cfg.pick / cfg.max) * 100;  // e.g. 10.9% for 6/55
+  const maxBarPct = Math.max(maxExpPct * 3.5, ...enriched.map(e => e.recentPct)); // scale
+
+  $("ball-report-grid").innerHTML = enriched.map(e => {
+    // Percentage bars (capped at maxBarPct for scale)
+    const recentBarW   = Math.min(100, (e.recentPct  / maxBarPct) * 100).toFixed(1);
+    const alltimeBarW  = Math.min(100, (e.allTimePct / maxBarPct) * 100).toFixed(1);
+    const expBarW      = Math.min(100, (maxExpPct    / maxBarPct) * 100).toFixed(1);
+    const expLineLeft  = expBarW;
+
+    // Deviation badge
+    const devSign = e.deviation > 1 ? "+" : "";
+    const devCls  = e.deviation > 1 ? "dev-pos" : e.deviation < -1 ? "dev-neg" : "dev-neu";
+    const devBadge = `<span class="dev-badge ${devCls}">${devSign}${e.deviation}%</span>`;
+
+    // Gap pill
+    const gapCls = e.gapNow >= 15 ? "gap-warn" : e.gapNow <= 2 ? "gap-ok" : "";
+    const gapLabel = e.gapNow === 0 ? "Xuất hiện kỳ này" : `Vắng ${e.gapNow} kỳ`;
+
+    // Draw-presence dots (10 dots)
+    const dots = Array.from({ length: n }, (_, idx) => {
+      const appeared = e.appearedIn.includes(idx);
+      const kyNum    = meta.totalDraws - n + idx + 1;
+      return `<div class="draw-dot ${appeared ? 'appeared' : 'absent'}" title="Kỳ ${kyNum}">${appeared ? '●' : '○'}</div>`;
+    }).join("");
+
+    // Stat pills
+    const pills = [
+      `<span class="stat-pill">Z tần suất: ${e.freqZ > 0 ? '+' : ''}${e.freqZ}</span>`,
+      `<span class="stat-pill">Z khoảng cách: ${e.gapZ > 0 ? '+' : ''}${e.gapZ}</span>`,
+      `<span class="stat-pill">Bayes: ${e.blendedP}%</span>`,
+      e.isSig ? `<span class="stat-pill sig">⚡ Ý nghĩa thống kê</span>` : "",
+      `<span class="stat-pill ${gapCls}">${gapLabel}</span>`,
+    ].join("");
+
+    // Best pair
+    const pairHtml = e.bestPairBall
+      ? `<div class="brc-pair">🔗 Hay đi cùng nhất: <span class="brc-pair-ball">${e.bestPairBall}</span> (lift ${e.bestPairLift}×)</div>`
+      : "";
+
+    return `<div class="ball-report-card type-${e.typeClass}">
+      <div class="brc-header">
+        <div class="brc-ball ${e.typeClass}">${e.ball}</div>
+        <div class="brc-info">
+          <div class="brc-type-label">${e.typeLabel}</div>
+          <div class="brc-appearances">${e.appearances} lần <span>/ ${n} kỳ</span>${devBadge}</div>
+          <div class="brc-trend-label">${e.trendLabel}</div>
+        </div>
+      </div>
+
+      <div class="brc-pct-section">
+        <div class="brc-pct-row">
+          <span class="brc-pct-label">Tỷ lệ ${n} kỳ gần</span>
+          <div class="brc-pct-bar-wrap">
+            <div class="brc-pct-bar-fill bar-recent" style="width:${recentBarW}%"></div>
+            <div class="brc-expected-line" style="left:${expLineLeft}%" title="Kỳ vọng ${maxExpPct.toFixed(1)}%"></div>
+          </div>
+          <span class="brc-pct-val val-recent">${e.recentPct}%</span>
+        </div>
+        <div class="brc-pct-row">
+          <span class="brc-pct-label">Lịch sử toàn thời</span>
+          <div class="brc-pct-bar-wrap">
+            <div class="brc-pct-bar-fill bar-alltime" style="width:${alltimeBarW}%"></div>
+            <div class="brc-expected-line" style="left:${expLineLeft}%"></div>
+          </div>
+          <span class="brc-pct-val val-alltime">${e.allTimePct}%</span>
+        </div>
+        <div class="brc-pct-row">
+          <span class="brc-pct-label">Kỳ vọng lý thuyết</span>
+          <div class="brc-pct-bar-wrap">
+            <div class="brc-pct-bar-fill" style="width:${expBarW}%;background:rgba(255,255,255,0.15)"></div>
+          </div>
+          <span class="brc-pct-val val-expected">${e.expectedPct}%</span>
+        </div>
+      </div>
+
+      <div class="brc-stat-pills">${pills}</div>
+
+      <div style="margin-bottom:8px;">
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Xuất hiện trong ${n} kỳ (mới → cũ)</div>
+        <div class="brc-draw-dots">${dots}</div>
+      </div>
+
+      ${pairHtml}
+
+      <div class="brc-reasons">
+        <div class="brc-reasons-title">💡 Lý do xuất hiện</div>
+        ${e.reasons.map(r => `<div class="brc-reason-item">${r}</div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+
+  // ── Tab 2: Per-draw table ──────────────────────────────────────────────────
+  const hotSet  = new Set(state.freqModel.hotNumbers);
+  const coldSet = new Set(state.freqModel.coldNumbers);
+  const gaps    = state.freqModel.rawGaps ?? {};
+
+  $("draw-by-draw-tbody").innerHTML = [...drawSummaries].reverse().map(ds => {
+    const ballsHtml = ds.numbers.map(b => {
+      let cls = "mb-neut";
+      if (hotSet.has(b))       cls = "mb-hot";
+      else if (coldSet.has(b)) cls = "mb-cold";
+      else if ((gaps[b] ?? 0) >= Math.round(state.freqModel.muGap)) cls = "mb-over";
+      return `<span class="mini-ball ${cls}" title="Số ${b}">${b}</span>`;
+    }).join("");
+
+    const charHtml = `<span class="char-badge ${ds.drawCharacter.cls}">${ds.drawCharacter.label}</span>`;
+
+    const hcPills = [
+      ds.hotCount   ? `<span class="hc-pill hp">🔥 ${ds.hotCount} HOT</span>`    : "",
+      ds.coldCount  ? `<span class="hc-pill cp">🧊 ${ds.coldCount} Lạnh</span>`  : "",
+      ds.risingCount ? `<span class="hc-pill rp">📈 ${ds.risingCount} Tăng</span>` : "",
+    ].join("");
+
+    const pairHtml = ds.topPair
+      ? `<span class="mini-ball mb-hot">${ds.topPair.a}</span>+<span class="mini-ball mb-hot">${ds.topPair.b}</span> <span style="font-size:0.68rem;color:var(--amber)">${ds.topPair.lift.toFixed(1)}×</span>`
+      : "—";
+
+    return `<tr>
+      <td><span class="draw-ky">#${ds.idx}</span></td>
+      <td class="draw-date-cell">${ds.date}</td>
+      <td>${ballsHtml}</td>
+      <td>${charHtml}</td>
+      <td><div class="draw-hc-pills">${hcPills || '<span style="color:var(--text-muted);font-size:0.75rem">—</span>'}</div></td>
+      <td>${pairHtml}</td>
+    </tr>`;
+  }).join("");
+
+  // ── Tab 3: Pair co-occurrence ──────────────────────────────────────────────
+  const maxLift = Math.max(...repeatPairs.map(p => parseFloat(p.lift)), 1);
+
+  if (repeatPairs.length === 0) {
+    $("pair-analysis-content").innerHTML =
+      `<div class="no-pair-data">🔍 Không có cặp số nào xuất hiện ≥ 2 lần trong ${n} kỳ này.</div>`;
+  } else {
+    $("pair-analysis-content").innerHTML =
+      `<p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px">
+         Các cặp số xuất hiện cùng nhau ≥ 2 lần trong <strong style="color:var(--cyan-l)">${n} kỳ</strong> gần nhất.
+         Cột <em>Lift</em> so sánh với kỳ vọng ngẫu nhiên (> 1 = hay đi cùng nhau hơn ngẫu nhiên).
+       </p>
+       <table class="pair-table">
+         <thead><tr><th>Cặp Số</th><th>Số Lần Cùng Xuất Hiện</th><th>Lift Lịch Sử (vs kỳ vọng)</th><th>Đánh Giá</th></tr></thead>
+         <tbody>${repeatPairs.map(p => {
+           const liftWidth = Math.min(100, (p.lift / maxLift) * 100).toFixed(0);
+           const cntClass  = p.cnt >= 3 ? "pair-cnt-3" : "pair-cnt-2";
+           const liftText  = p.lift > 1.5 ? "📌 Hay đi cùng" : p.lift > 1 ? "Trên mức ngẫu nhiên" : "Bình thường";
+           return `<tr>
+             <td><div class="pair-balls">
+               <span class="mini-ball mb-hot">${p.a}</span>
+               <span style="color:var(--text-muted);font-size:0.8rem">+</span>
+               <span class="mini-ball mb-hot">${p.b}</span>
+             </div></td>
+             <td><span class="pair-cnt-badge ${cntClass}">${p.cnt}×</span></td>
+             <td>
+               <span class="lift-val">${p.lift}×</span>
+               <div class="lift-bar-wrap"><div class="lift-bar-fill" style="width:${liftWidth}%"></div></div>
+             </td>
+             <td style="font-size:0.74rem;color:var(--text-dim)">${liftText}</td>
+           </tr>`;
+         }).join("")}</tbody>
+       </table>`;
+  }
+
+  $("draw-analysis-section").style.display = "block";
+}
+
+// ── Draw Analysis Tabs & Controls ─────────────────────────────────────────────
+function setupDrawAnalysisTabs() {
+  // Tab switching
+  document.querySelectorAll(".analysis-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".analysis-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".analysis-tab-panel").forEach(p => p.classList.remove("active"));
+      tab.classList.add("active");
+      const panel = $(tab.dataset.tab);
+      if (panel) panel.classList.add("active");
+    });
+  });
+
+  // Draw count buttons
+  document.querySelectorAll(".draw-count-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".draw-count-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.analysisN = parseInt(btn.dataset.n, 10);
+      renderDrawAnalysis();
+    });
+  });
+
+  // Refresh button
+  $("analysis-refresh-btn")?.addEventListener("click", renderDrawAnalysis);
 }
 
 // ── Gap Tracker ───────────────────────────────────────────────────────────────

@@ -49,7 +49,7 @@
             <span class="game-icon">⚡</span>
             <span class="game-name">Power 6/55</span>
             <span class="game-meta">Pick 6 from 1–55</span>
-            <span class="game-draws" id="draws-power655">1,337 draws</span>
+            <span class="game-draws" id="draws-power655">1,339 draws</span>
           </button>
           <button class="game-card" id="btn-mega645" data-game="mega645">
             <span class="game-icon">🌀</span>
@@ -148,7 +148,7 @@
       <div class="empty-state" id="empty-state">
         <div class="empty-icon">🎱</div>
         <h2>Select a game to get started</h2>
-        <p>Click ⚡ Power 6/55 or 🌀 Mega 6/45 to instantly load 1,300+ real historical draws and start analysing.</p>
+        <p>Click ⚡ Power 6/55 or 🌀 Mega 6/45 to instantly load 1,300+ real historical draws and start analysing. <em>Database cập nhật: 30/04/2026</em></p>
       </div>
 
       <!-- Last 10 Draws -->
@@ -160,6 +160,68 @@
             <tbody></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- ══ DRAW ANALYSIS REPORT ══ -->
+      <div class="card" id="draw-analysis-section" style="display:none">
+
+        <!-- Header row -->
+        <div class="analysis-header">
+          <div style="display:flex;align-items:center;gap:10px;flex:1">
+            <p class="card-title" style="margin-bottom:0">🔬 Phân Tích Chi Tiết Kỳ Gần Nhất</p>
+            <div class="draw-count-toggle" id="draw-count-toggle">
+              <button class="draw-count-btn" data-n="5">5 kỳ</button>
+              <button class="draw-count-btn active" data-n="10">10 kỳ</button>
+              <button class="draw-count-btn" data-n="20">20 kỳ</button>
+            </div>
+          </div>
+          <button class="analysis-refresh-btn" id="analysis-refresh-btn">
+            <span class="spin">🔄</span> Làm mới
+          </button>
+        </div>
+
+        <!-- Summary metrics -->
+        <div class="analysis-summary-grid" id="analysis-summary-grid"></div>
+
+        <!-- Significance alert -->
+        <div id="analysis-sig-alert" style="display:none"></div>
+
+        <!-- Tab navigation -->
+        <div class="analysis-tabs">
+          <button class="analysis-tab active" data-tab="tab-byball">📊 Theo Từng Số</button>
+          <button class="analysis-tab" data-tab="tab-bydraw">📅 Theo Từng Kỳ</button>
+          <button class="analysis-tab" data-tab="tab-pairs">🔗 Cặp Số</button>
+        </div>
+
+        <!-- Tab: Per-ball report -->
+        <div class="analysis-tab-panel active" id="tab-byball">
+          <div class="ball-report-grid" id="ball-report-grid"></div>
+        </div>
+
+        <!-- Tab: Per-draw table -->
+        <div class="analysis-tab-panel" id="tab-bydraw">
+          <div class="table-wrap">
+            <table class="draw-by-draw-table" id="draw-by-draw-table">
+              <thead>
+                <tr>
+                  <th>Kỳ</th>
+                  <th>Ngày</th>
+                  <th>Các Số Quay</th>
+                  <th>Phân Loại</th>
+                  <th>Hot / Lạnh / Tăng</th>
+                  <th>Cặp Nổi Bật</th>
+                </tr>
+              </thead>
+              <tbody id="draw-by-draw-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Pair co-occurrence -->
+        <div class="analysis-tab-panel" id="tab-pairs">
+          <div id="pair-analysis-content"></div>
+        </div>
+
       </div>
 
       <!-- Ball Stats -->
