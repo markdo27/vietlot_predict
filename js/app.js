@@ -52,7 +52,7 @@ async function loadFromUrl(url, filename, game, card) {
   showStatus("loading", `Loading ${filename}…`);
 
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url + `?v=${Date.now()}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const text = await resp.text();
 
