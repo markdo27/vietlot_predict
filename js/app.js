@@ -1,4 +1,4 @@
-﻿/**
+/**
  * app.js — Refactored application controller (Sprints 1–3)
  */
 import { parseFile, detectGame, getMatrix, GAME_CONFIG } from "./data-ingestion.js";
@@ -66,7 +66,7 @@ async function loadFromUrl(url, filename, game, card) {
 
     card.classList.remove("loading");
     card.classList.add("active");
-    showStatus("success", `✓ ${state.records.length} kỳ đã tải`);
+    showStatus("success", `✓ Đã tải ${state.records.length} kỳ`);
 
     // Unlock step 2 + expert card
     $("step2-card").style.opacity = "1";
@@ -110,7 +110,7 @@ async function handleUpload(file) {
   const text = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = e => res(e.target.result);
-    r.onerror = () => rej(new Error("Lỗi đọc file"));
+    r.onerror = () => rej(new Error("File read error"));
     r.readAsText(file, "utf-8");
   });
   try {
@@ -121,7 +121,7 @@ async function handleUpload(file) {
 
     $("drop-zone").classList.add("has-file");
     $("drop-zone").querySelector(".drop-label").textContent = `${file.name} — ${state.records.length} draws`;
-    showStatus("success", `✓ ${state.records.length} kỳ đã tải`);
+    showStatus("success", `✓ Đã tải ${state.records.length} kỳ`);
 
     $("step2-card").style.opacity = "1"; $("step2-card").style.pointerEvents = "auto";
     $("expert-card").style.opacity = "1"; $("expert-card").style.pointerEvents = "auto";
@@ -504,7 +504,7 @@ function renderFreqChart() {
   const labels = Array.from({ length: cfg.max }, (_, i) => i + 1);
   const data   = labels.map(b => state.freqModel.counts[b] || 0);
   const hotSet = new Set(state.freqModel.hotNumbers);
-  const colors = labels.map(b => hotSet.has(b) ? "rgba(192,57,43,0.85)" : "rgba(41,128,185,0.5)");
+  const colors = labels.map(b => hotSet.has(b) ? "rgba(168,85,247,0.85)" : "rgba(6,182,212,0.5)");
 
   if (state.chart) state.chart.destroy();
   state.chart = new Chart($("freq-chart").getContext("2d"), {
@@ -512,7 +512,7 @@ function renderFreqChart() {
     data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 3, borderSkipped: false }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Số ${c.label}: ${c.raw} lần` } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Ball ${c.label}: ${c.raw} draws` } } },
       scales: {
         x: { ticks: { color: "#64748b", font: { size: 9 } }, grid: { color: "rgba(255,255,255,0.04)" } },
         y: { ticks: { color: "#64748b" }, grid: { color: "rgba(255,255,255,0.04)" } }
@@ -531,8 +531,8 @@ function initLossChart() {
     data: {
       labels: [],
       datasets: [
-        { label: "Train", data: [], borderColor: "#c0392b", backgroundColor: "rgba(192,57,43,0.08)", tension: 0.4, fill: true, pointRadius: 0 },
-        { label: "Val",   data: [], borderColor: "#2980b9", backgroundColor: "rgba(41,128,185,0.06)", tension: 0.4, fill: true, pointRadius: 0, borderDash: [4,3] }
+        { label: "Train", data: [], borderColor: "#a855f7", backgroundColor: "rgba(168,85,247,0.1)", tension: 0.4, fill: true, pointRadius: 0 },
+        { label: "Val",   data: [], borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", tension: 0.4, fill: true, pointRadius: 0, borderDash: [4,3] }
       ]
     },
     options: {
@@ -574,7 +574,7 @@ async function onGenerate() {
     if (mode !== "frequency" && (!lstmModel || state.trainedMode !== mode)) {
       const { buildLSTMModel: buildM, buildSequences: buildS, trainLSTM: trainM } = await import("./lstm-model.js");
       const cfg = GAME_CONFIG[game];
-      showStatus("loading", "Đang chuẩn bị dữ liệu LSTM…");
+      showStatus("loading", "Đang xây dựng chuỗi LSTM…");
       const { xs, ys } = buildS(state.matrix, seqLen, cfg.max);
       lstmModel = buildM(seqLen);
       $("training-section").style.display = "block";
@@ -595,7 +595,7 @@ async function onGenerate() {
 
     const ranked = scoreAndRank(tickets, freqModel, state.matrix);
     renderTickets(ranked, game);
-    showStatus("success", `✓ ${tickets.length} bộ số đã tạo`);
+    showStatus("success", `✓ Đã tạo ${tickets.length} bộ số`);
 
   } catch (err) {
     showStatus("error", `✗ ${err.message}`);
@@ -623,14 +623,14 @@ function renderTickets(ranked, game) {
     const delay   = i * 70;
     const balls   = ticket.map(n => {
       const cls = hotSet.has(n) ? "tball tball-hot" : gaps[n] >= 10 ? "tball tball-overdue" : "tball";
-      return `<span class="${cls}" title="Ball ${n}">${n}</span>`;
+      return `<span class="${cls}" title="Số ${n}">${n}</span>`;
     }).join("");
     const badgeCls = `ticket-badge badge-${tier}`;
     const scoreCls = tier;
 
     return `<div class="ticket-card tier-${tier}" style="animation-delay:${delay}ms">
       <div class="ticket-header">
-        <span class="ticket-num">Ticket ${i + 1}</span>
+        <span class="ticket-num">Vé số ${i + 1}</span>
         <span class="${badgeCls}">${score.label}</span>
       </div>
       <div class="ticket-balls">${balls}</div>
@@ -639,14 +639,14 @@ function renderTickets(ranked, game) {
         <div class="score-bar"><div class="score-fill ${scoreCls}" style="width:${score.total}%"></div></div>
       </div>
       <div class="score-breakdown">
-        <span title="Bayesian posterior rank">📊 Bayes ${score.breakdown.bayes}</span>
-        <span title="Geometric gap Z-score">⏳ Gap ${score.breakdown.gap}</span>
-        <span title="Pair co-occurrence lift">🔗 Lift ${score.breakdown.pair}</span>
-        <span title="Number range spread">↔ Spread ${score.breakdown.spread}</span>
+        <span title="Xếp hạng Bayesian">📊 Bayes ${score.breakdown.bayes}</span>
+        <span title="Z-score khoảng cách">⏳ Khoảng cách ${score.breakdown.gap}</span>
+        <span title="Hệ số cặp số">🔗 Cặp ${score.breakdown.pair}</span>
+        <span title="Độ trải rộng số">↔ Trải ${score.breakdown.spread}</span>
       </div>
       <div class="ticket-actions">
-        <button class="Sao chép-btn" onclick="Sao chépTicket('${ticket.join(", ")}', this)">Sao chép</button>
-        <button class="save-btn" id="save-${i}" onclick="saveTicketByIdx(${i}, 'save-${i}')">💾 Save</button>
+        <button class="copy-btn" onclick="copyTicket('${ticket.join(", ")}', this)">Sao chép</button>
+        <button class="save-btn" id="save-${i}" onclick="saveTicketByIdx(${i}, 'save-${i}')">Lưu</button>
       </div>
     </div>`;
   }).join("");
@@ -677,10 +677,10 @@ function renderSavedPanel() {
       </div>
       <div class="ticket-balls">${balls}</div>
       <div class="ticket-actions">
-        <button class="Sao chép-btn" onclick="Sao chépTicket('${p.ticket.join(", ")}', this)">Sao chép</button>
-        <button class="Sao chép-btn delete-btn" onclick="doDeletePick(${p.id})">🗑 Remove</button>
+        <button class="copy-btn" onclick="copyTicket('${p.ticket.join(", ")}', this)">Sao chép</button>
+        <button class="copy-btn delete-btn" onclick="doDeletePick(${p.id})">Xoá</button>
       </div>
-      <p class="saved-at">Saved ${date}</p>
+      <p class="saved-at">Đã lưu: ${date}</p>
     </div>`;
   }).join("");
 
@@ -705,7 +705,7 @@ function toggleSavedPanel() {
 }
 
 // ── Global helpers ────────────────────────────────────────────────────────────
-window.Sao chépTicket = (text, btn) => {
+window.copyTicket = (text, btn) => {
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = "Đã sao chép!";
     setTimeout(() => btn.textContent = "Sao chép", 1500);
@@ -779,14 +779,14 @@ function renderBaoResults(result) {
 
   // Meta badge
   $("bao-meta-badge").textContent =
-    `${cfg.label} · ${ticketCount} tickets · ${costFormatted}`;
+    `${cfg.label} · ${ticketCount} vé · ${costFormatted}`;
 
   // Info chips
   $("bao-info-row").innerHTML = [
     { label: "Pool", val: pool.join(", ") },
-    { label: "Tickets", val: ticketCount.toLocaleString() },
-    { label: "Total Cost", val: costFormatted },
-    { label: "Guarantee", val: cfg.guarantee },
+    { label: "Số vé", val: ticketCount.toLocaleString() },
+    { label: "Tổng chi phí", val: costFormatted },
+    { label: "Đảm bảo", val: cfg.guarantee },
   ].map(({ label, val }) =>
     `<div class="bao-info-chip"><span class="chip-label">${label}</span> ${val}</div>`
   ).join("");
@@ -796,7 +796,7 @@ function renderBaoResults(result) {
   $("bao-table-body").innerHTML = winRates.map(row => {
     const gtCount = row.guaranteedTickets;
     const gtText  = gtCount > 0
-      ? `<strong>${gtCount} ticket${gtCount > 1 ? "s" : ""} win</strong> if ${row.match} winning numbers in pool`
+      ? `<strong>${gtCount} vé trúng</strong> nếu có ${row.match} số trúng trong pool`
       : "—";
     return `<tr>
       <td><span class="bao-match-badge bao-match-${row.match}">${row.match}/6</span></td>
@@ -825,7 +825,7 @@ function renderBaoResults(result) {
         <p class="bao-ticket-num">Ticket ${i + 1} of ${tickets.length}</p>
         <div class="ticket-balls">${balls}</div>
         <div class="ticket-actions">
-          <button class="Sao chép-btn" onclick="Sao chépTicket('${tkt.join(", ")}',this)">Sao chép</button>
+          <button class="copy-btn" onclick="copyTicket('${tkt.join(", ")}',this)">Copy</button>
         </div>
       </div>`;
     }).join("");
@@ -836,5 +836,4 @@ function renderBaoResults(result) {
 
 // Expose unlockBaoCard for post-data-load calls
 export { unlockBaoCard };
-
 
