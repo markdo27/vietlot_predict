@@ -1,20 +1,26 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
-  --bg:#f5f3ef; --surface:#ffffff; --surface2:#f0ede8; --surface3:#e8e4dd;
-  --border:#ddd8d0; --border2:#c8c2b8;
-  --red:#c0392b; --red-l:#e74c3c;
-  --green:#27ae60; --green-d:#1e8449;
-  --blue:#2980b9; --blue-l:#3498db;
-  --amber:#e67e22; --amber-l:#f39c12;
-  --ink:#1a1a1a; --ink-mid:#444; --ink-muted:#777; --ink-faint:#aaa;
-  --accent:#c0392b; --accent-l:#e74c3c;
-  --radius:10px; --radius-sm:6px;
+  /* Paper/ink chrome. Names are unchanged so existing rules keep resolving.
+     --accent is now ink because it drives chrome (buttons, active borders,
+     headings); the data hues below keep their meaning and are applied to the
+     hot/cold/overdue selectors explicitly in the CIRCLE UI layer at the end
+     of this file. All are darkened to read on a light ground. */
+  --bg:#fafafa; --surface:#ffffff; --surface2:#fafafa; --surface3:#f5f5f5;
+  --border:#e5e5e5; --border2:#d4d4d4;
+  --red:#b91c1c; --red-l:#dc2626;
+  --green:#15803d; --green-d:#166534;
+  --blue:#1d4ed8; --blue-l:#2563eb;
+  --amber:#a16207; --amber-l:#ca8a04;
+  --ink:#0a0a0a; --ink-mid:#525252; --ink-muted:#737373; --ink-faint:#a3a3a3;
+  --accent:#0a0a0a; --accent-l:#262626;
+  --on-ink:#fafafa;
+  --radius:0px; --radius-sm:0px;
 }
 
 html{scroll-behavior:smooth}
 body{
-  font-family:"Be Vietnam Pro",system-ui,sans-serif;
+  font-family:'IBM Plex Mono','JetBrains Mono',ui-monospace,monospace;
   background:var(--bg);color:var(--ink);
   min-height:100vh;overflow-x:hidden;line-height:1.6;
 }
@@ -704,3 +710,140 @@ select:focus,input[type="number"]:focus{border-color:var(--accent)}
 
 
 
+
+/* ══════════════════════════════════════════════════════════════
+   CIRCLE UI LAYER
+   Brings the app in line with the CIRCLE design system: hard 1px
+   borders, zero radius, no shadows or gradients, uppercase mono
+   labels, active states inverted to ink-on-paper.
+
+   This sits at the end as an override layer rather than being folded
+   into the rules above, so the analytics styling stays readable and
+   the visual system can be lifted out in one piece.
+   ══════════════════════════════════════════════════════════════ */
+
+::selection{background:var(--ink);color:var(--bg)}
+
+/* ── Square everything. The remaining radii above are hardcoded pixel
+      values rather than var(--radius), so they are reset by name. ── */
+.logo-ball,.saved-count,.saved-toggle-btn,.today-dot,.today-game-tag,.today-ball,
+.today-ball-combo,.today-refresh-btn,.today-ball-skeleton,.stepper-btn,.draw-ball,
+.ball,.gap-ball-num,.gap-bar,.gap-bar-fill,.clear-btn,.ticket-badge,.tball,
+.score-bar,.score-fill,.score-breakdown span,.copy-btn,.save-btn,.delete-btn,
+.bao-match-badge,.bao-meta-badge,.pool-ball,.bao-info-chip,.bao-type-btn,
+.meta-chip,.analysis-tab,.mini-ball,.char-badge,.hc-pill,.brc-ball,
+.brc-pct-bar-wrap,.brc-pct-bar-fill,.brc-expected-line,.dev-badge,.stat-pill,
+.draw-dot,.brc-pair-ball,.pair-cnt-badge,.lift-bar-wrap,.lift-bar-fill,
+.analysis-refresh-btn,.draw-count-btn,.sig-ball,.ticket-card::before,
+::-webkit-scrollbar-thumb{border-radius:0}
+
+/* ── No depth: shadows, lifts and gradient text all go flat. ── */
+.game-card.active,.ticket-card:hover,.ball-report-card:hover,.today-ball-hot,
+.today-ball-overdue,.today-ball-combo,.generate-btn:hover:not(:disabled),
+.ball:hover,.tball:hover,.today-ball:hover{box-shadow:none;transform:none}
+.summary-box-val{background:none;-webkit-text-fill-color:var(--ink);color:var(--ink)}
+.bar-recent{background:var(--red)}
+.bar-alltime{background:var(--blue)}
+.lift-bar-fill{background:var(--amber)}
+
+/* ── Header ── */
+.site-header{border-bottom:1px solid var(--ink)}
+.logo-ball{background:var(--ink);color:var(--on-ink);font-weight:700}
+.logo-ball-2{background:var(--surface);color:var(--ink);border:1px solid var(--ink)}
+.header-text h1{font-weight:700;letter-spacing:-0.02em}
+.header-text h1 span{color:var(--ink)}
+.header-sub{text-transform:uppercase;letter-spacing:0.15em;font-size:0.68rem}
+.saved-toggle-btn{border:1px solid var(--ink);background:var(--bg);color:var(--ink);
+  text-transform:uppercase;letter-spacing:0.12em;font-size:0.7rem;font-weight:400}
+.saved-toggle-btn:hover{background:var(--surface3)}
+.saved-count{background:var(--ink);color:var(--on-ink)}
+
+/* ── Today banner: was a dark gradient panel; now paper inside an ink rule. ── */
+.today-banner{background:var(--surface);border:1px solid var(--ink);border-bottom:1px solid var(--ink);animation:none}
+.today-label-text{color:var(--ink)}
+.today-dot{background:var(--red);box-shadow:none}
+.today-game-tag{background:var(--bg);color:var(--ink);border:1px solid var(--ink)}
+.today-draw-date,.today-picks-title,.today-banner-footer span{color:var(--ink-muted)}
+.today-banner-footer{border-top:1px solid var(--border)}
+.today-banner-footer strong{color:var(--ink)}
+.today-divider{background:var(--border)}
+.today-refresh-btn{background:var(--bg);border:1px solid var(--ink);color:var(--ink);
+  text-transform:uppercase;letter-spacing:0.12em;font-weight:400}
+.today-refresh-btn:hover{background:var(--ink);color:var(--on-ink)}
+.today-ball-skeleton{background:var(--surface3)}
+.today-ball-hot{background:var(--red);color:#fff}
+.today-ball-overdue{background:var(--amber);color:#fff}
+.today-ball-combo{background:var(--ink);color:var(--on-ink);border:1px solid var(--ink)}
+
+/* ── Panels and controls ── */
+.card,.ticket-card,.ball-report-card,.summary-box{border:1px solid var(--ink)}
+.card-label,.stat-label,.bao-pool-label,.brc-reasons-title,.summary-box-label{
+  letter-spacing:0.15em;font-weight:400}
+.game-card{border:1px solid var(--border2);background:var(--surface)}
+.game-card:hover{border-color:var(--ink);background:var(--surface3)}
+.game-card.active{border-color:var(--ink);background:var(--ink)}
+.game-card.active .game-name,.game-card.active .game-meta,.game-card.active .game-draws{color:var(--on-ink)}
+.game-draws{color:var(--ink-muted)}
+.stepper-btn{border:1px solid var(--ink);background:var(--bg)}
+.stepper-btn:hover{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.stepper-val{color:var(--ink);font-weight:700}
+select,input[type="number"]{border:1px solid var(--border2);background:var(--bg)}
+select:focus,input[type="number"]:focus{border-color:var(--ink)}
+.form-group label{text-transform:uppercase;letter-spacing:0.12em;font-weight:400;font-size:0.68rem}
+.generate-btn{background:var(--ink);color:var(--on-ink);border:1px solid var(--ink);
+  text-transform:uppercase;letter-spacing:0.15em;font-size:0.78rem;font-weight:400}
+.generate-btn:hover:not(:disabled){background:var(--accent-l)}
+.bao-gen-btn{background:var(--bg);color:var(--ink)}
+.bao-gen-btn:hover:not(:disabled){background:var(--surface3)}
+#drop-zone{border:1px dashed var(--border2)}
+#drop-zone:hover{border-color:var(--ink);background:var(--surface3)}
+#drop-zone.has-file{border-style:solid;border-color:var(--green)}
+.section-title{border-bottom:1px solid var(--ink);font-weight:700}
+
+/* ── Data colours keep their meaning; --accent no longer carries "hot". ── */
+.ball.hot,.draw-ball.hot-ball,.tball-hot,.mb-hot,.brc-ball.hot,.brc-ball.hot-rising,
+.bao-match-5{background:var(--red);border-color:var(--red);color:#fff}
+.ball.cold,.mb-cold,.brc-ball.cold,.brc-ball.cold-falling,.bao-match-4{background:var(--blue);color:#fff}
+.ball.overdue,.tball-overdue,.mb-over,.brc-ball.overdue,.bao-match-6{background:var(--amber);border-color:var(--amber);color:#fff}
+.ball.trending-up{background:var(--green);color:#fff}
+.ball.trending-down{background:var(--surface3);color:var(--ink);border:1px solid var(--border2)}
+.stat-label.hot{color:var(--red)}
+.gap-critical .gap-ball-num,.gap-critical .gap-bar-fill{background:var(--red)}
+.score-fill.neutral{background:var(--ink)}
+.val-recent,.char-hot,.hc-pill.hp,.dev-pos,.draw-dot.appeared,.pair-cnt-2{color:var(--red)}
+.char-rising,.hc-pill.rp{color:var(--green)}
+.stat-pill.gap-ok{color:var(--green);border-color:var(--green)}
+.stat-pill.gap-warn{color:var(--red);border-color:var(--red)}
+.ticket-card.type-hot-rising,.ball-report-card.type-hot-rising,.ball-report-card.type-hot{border-left:3px solid var(--red)}
+.ball-report-card.type-cold,.ball-report-card.type-cold-falling{border-left:3px solid var(--blue)}
+.brc-reason-item{border-left:2px solid var(--border2)}
+
+/* ── Tabs read as CIRCLE's segmented control. ── */
+.analysis-tabs{border-bottom:1px solid var(--ink);gap:0}
+.analysis-tab{border:1px solid var(--ink);border-right:none;background:var(--bg);color:var(--ink);
+  text-transform:uppercase;letter-spacing:0.12em;font-size:0.7rem;font-weight:400;bottom:0}
+.analysis-tab:last-child{border-right:1px solid var(--ink)}
+.analysis-tab:hover{background:var(--surface3);color:var(--ink)}
+.analysis-tab.active{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+
+/* ── Tables ── */
+.draws-table th,.bao-table th,.draw-by-draw-table th,.pair-table th{
+  border-bottom:1px solid var(--ink);letter-spacing:0.12em;font-weight:400}
+.draw-ky{color:var(--ink)}
+
+/* ── Small buttons and pills ── */
+.clear-btn,.copy-btn,.save-btn,.delete-btn,.draw-count-btn,.analysis-refresh-btn,
+.bao-type-btn,.meta-chip,.bao-info-chip{
+  border:1px solid var(--border2);background:var(--bg);color:var(--ink);
+  text-transform:uppercase;letter-spacing:0.1em;font-weight:400}
+.clear-btn:hover,.copy-btn:hover,.save-btn:hover,.delete-btn:hover,
+.draw-count-btn:hover,.analysis-refresh-btn:hover,.bao-type-btn:hover{
+  background:var(--surface3);border-color:var(--ink);color:var(--ink)}
+.draw-count-btn.active,.bao-type-btn.active{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.save-btn.saved{background:var(--bg);border-color:var(--green);color:var(--green)}
+.delete-btn{border-color:var(--red);color:var(--red)}
+.badge-gold{background:var(--bg);border:1px solid var(--amber);color:var(--amber)}
+.badge-neutral,.badge-low{background:var(--bg);border:1px solid var(--border2);color:var(--ink-muted)}
+.ticket-card.tier-gold{border-color:var(--amber)}
+.ticket-card.tier-gold::before{background:var(--amber)}
+.ticket-card::before{background:var(--ink)}
