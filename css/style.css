@@ -702,5 +702,26 @@ select:focus,input[type="number"]:focus{border-color:var(--accent)}
 .sig-ball-list { display: flex; gap: 4px; flex-wrap: wrap; }
 .sig-ball { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(245,158,11,0.2); border: 1px solid rgba(245,158,11,0.35); font-size: 0.7rem; font-weight: 800; color: var(--amber); }
 
+/* ── Giới thiệu & bản quyền ─────────────────────────────────────────
+   Đặt cuối trang, dùng lại .section-title của các mục phía trên. */
+.site-footer{margin-top:48px}
+.about{
+  display:grid;grid-template-columns:auto 1fr;gap:10px 20px;
+  align-items:baseline;margin:0;
+}
+.about dt{
+  font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
+  color:var(--ink-muted);white-space:nowrap;
+}
+.about dd{margin:0;font-size:0.85rem;line-height:1.55;color:var(--ink-mid)}
+.about a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+.about a:hover{color:var(--accent-l)}
+.about-note{
+  margin:18px 0 0;padding-top:12px;border-top:1px solid var(--border);
+  font-size:0.72rem;color:var(--ink-faint);
+}
 
-
+@media (max-width:640px){
+  .about{grid-template-columns:1fr;gap:4px 0}
+  .about dd{margin-bottom:10px}
+}
